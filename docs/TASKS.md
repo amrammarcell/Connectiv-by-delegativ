@@ -7,14 +7,15 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 ---
 
 ## Sprint 0 — Fondasi
-- [ ] 👤 Daftar Supabase, buat project `connectiv-dev` (region Singapore), simpan password DB
-- [ ] 👤 Daftar Vercel dengan akun GitHub, import repo `Connectiv-by-delegativ`
-- [ ] 🤖 Scaffold Next.js 15 + TypeScript + Tailwind + shadcn/ui + ESLint/Prettier
-- [ ] 🤖 Setup Supabase CLI, folder `supabase/migrations`, client server/browser/service-role
-- [ ] 🤖 Validasi env dengan Zod, `.env.example`
-- [ ] 🤖 Layout aplikasi (sidebar, header, tema) sesuai prototipe UI
-- [ ] 🤖 `CLAUDE.md`: konvensi, perintah, aturan keamanan
-- [ ] 🤖 Vitest + GitHub Actions (lint, typecheck, test)
+- [x] 👤 Daftar Supabase, buat project `connectiv-dev` (region Singapore), simpan password DB
+- [ ] 👤 Isi `.env.local` dengan kunci Supabase (`docs/SETUP.md` bagian 2), cek `/api/health`
+- [ ] 👤 Daftar Vercel dengan akun GitHub, import repo `Connectiv-by-delegativ` (`docs/SETUP.md` bagian 3)
+- [x] 🤖 Scaffold Next.js 16 + TypeScript + Tailwind v4 + shadcn/ui + ESLint
+- [x] 🤖 Setup Supabase CLI (`supabase/config.toml`), client browser/server/admin
+- [x] 🤖 Validasi env dengan Zod, `.env.example`, endpoint `/api/health`
+- [x] 🤖 Layout aplikasi (sidebar, header, tema) sesuai prototipe UI
+- [x] 🤖 `CLAUDE.md`: konvensi, perintah, aturan keamanan
+- [x] 🤖 Vitest + GitHub Actions (lint, typecheck, test, build)
 - ✅ Aplikasi kosong bisa dibuka online di URL Vercel
 
 ## Sprint 1 — Auth, workspace, peran, RLS

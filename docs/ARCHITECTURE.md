@@ -46,7 +46,7 @@ flowchart LR
 
 Prinsip utama:
 1. **Webhook tidak boleh lambat atau hilang.** Payload mentah disimpan dulu, baru diproses. Yang gagal diulang oleh cron.
-2. **Isolasi workspace ada di database**, bukan di kode aplikasi. Semua akses dari UI lewat RLS dengan sesi user. Kunci `service_role` hanya dipakai di webhook dan cron.
+2. **Isolasi workspace ada di database**, bukan di kode aplikasi. Semua akses dari UI lewat RLS dengan sesi user. Secret key Supabase (`sb_secret_…`, melewati RLS) hanya dipakai di webhook dan cron.
 3. **BSP bisa diganti.** Semua format luar diubah ke satu tipe internal (`NormalizedEvent`) oleh adapter.
 4. **Inbox harus cepat.** Data yang sering ditampilkan (pesan terakhir, status menunggu) didenormalisasi ke tabel `contacts`.
 
@@ -56,7 +56,7 @@ Prinsip utama:
 
 | Lapisan | Pilihan | Catatan |
 |---|---|---|
-| Framework | Next.js 15 (App Router, TypeScript, Server Components, Server Actions) | `after()` untuk proses setelah respon |
+| Framework | Next.js 16 (App Router, TypeScript, Server Components, Server Actions, `cacheComponents`) | `after()` untuk proses setelah respon, `proxy.ts` untuk refresh sesi |
 | UI | Tailwind CSS + shadcn/ui, ikon lucide-react, chart Recharts | Bahasa UI Indonesia, format `id-ID`, zona waktu `Asia/Jakarta` |
 | Data fetching klien | Supabase JS (`@supabase/ssr`) + TanStack Query untuk cache inbox | Realtime lewat `supabase.channel()` |
 | Database | Supabase Postgres + RLS | Migrasi SQL via Supabase CLI (`supabase/migrations`) |
@@ -177,7 +177,7 @@ erDiagram
 Super Admin mengakses workspace klien lewat halaman `/admin`, dan setiap akses tercatat di `admin_access_log`.
 
 ### 5.3 Rahasia (environment variable)
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` (atau secret BSP), `WHATSAPP_ACCESS_TOKEN` (unduh media), `META_ADS_ACCESS_TOKEN` (system user Delegativ dengan akses partner ke ad account klien), `CRON_SECRET`. Divalidasi dengan Zod saat start.
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` (atau secret BSP), `WHATSAPP_ACCESS_TOKEN` (unduh media), `META_ADS_ACCESS_TOKEN` (system user Delegativ dengan akses partner ke ad account klien), `CRON_SECRET`. Divalidasi dengan Zod saat start.
 
 ### 5.4 Test isolasi (wajib, Sprint 1)
 Dua workspace (A, B), masing-masing dengan Owner dan CS. Test memastikan: user A tidak bisa membaca/mengubah satu baris pun milik B di setiap tabel, CS hanya melihat kontak yang di-assign, dan langganan Realtime B tidak menerima event A.
