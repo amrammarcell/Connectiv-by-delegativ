@@ -19,13 +19,15 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - ✅ Aplikasi kosong bisa dibuka online di URL Vercel — **selesai**: https://connectiv-by-delegativ-qjop.vercel.app
 
 ## Sprint 1 — Auth, workspace, peran, RLS
-- [ ] 🤖 Migrasi: `workspaces`, `profiles`, `memberships`, trigger buat profile saat signup
-- [ ] 🤖 Fungsi `is_member`, `role_in`, `is_super_admin` + kebijakan RLS
-- [ ] 🤖 Halaman login, logout, pilih workspace, routing `/w/[slug]`
-- [ ] 🤖 Admin: buat workspace (otomatis membuat stage default), undang Owner
-- [ ] 🤖 Pengaturan → User: Owner mengundang Supervisor/CS, ubah peran
-- [ ] 🤖 Test isolasi: dua workspace × dua peran, semua tabel
-- ✅ User dua workspace tidak bisa saling melihat data (dibuktikan test)
+- [x] 🤖 Migrasi: `workspaces`, `profiles`, `memberships`, `stages` (6 stage default otomatis), trigger profil saat user baru
+- [x] 🤖 Fungsi `is_member`, `role_in`, `is_super_admin`, `shares_workspace` + kebijakan RLS + hak akses per kolom
+- [x] 🤖 Halaman login, logout, ganti password, pilih workspace, `proxy.ts`, routing `/w/[slug]` (404 jika bukan anggota)
+- [x] 🤖 Admin: buat workspace + Owner (password sementara ditampilkan sekali)
+- [x] 🤖 Pengaturan → User: Owner menambah Supervisor/CS, ubah peran, hapus anggota
+- [x] 🤖 Test isolasi: 18 test RLS (dua workspace, tiga peran, user luar, anonim)
+- [ ] 👤 Buat akun sendiri di Supabase → Authentication → Users, lalu `npm run admin:promote -- email`
+- [ ] 👤 Matikan pendaftaran publik: Supabase → Authentication → Sign In / Providers → "Allow new users to sign up" off
+- ✅ User dua workspace tidak bisa saling melihat data (dibuktikan test) — **selesai**
 
 ## Sprint 2 — Webhook + adapter + pesan
 - [ ] 👤 Pilih BSP (checklist PRD 2.5), daftarkan URL webhook staging

@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local preview config
 .claude/launch.json
+
+# akun QA dari npm run seed:dev
+.qa-credentials.json

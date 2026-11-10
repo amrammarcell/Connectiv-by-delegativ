@@ -22,8 +22,19 @@ npm run lint
 npm run typecheck
 npm test            # Vitest
 npm run build
-npx supabase ...    # Supabase CLI (migrasi: supabase/migrations)
+npx supabase db push --remote   # terapkan migrasi ke project dev (tanpa Docker)
+npm run seed:dev    # workspace /w/demo + akun QA (kredensial di .qa-credentials.json)
+npm run admin:promote -- email   # jadikan akun Super Admin
 ```
+
+`npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi.
+
+## Auth dan akses
+
+- `proxy.ts` menyegarkan sesi dan mengarahkan ke `/login`. Hak akses per workspace dicek di `lib/auth.ts` (`requireUser`, `requireWorkspace`, `requireSuperAdmin`), lalu dijaga lagi oleh RLS.
+- Komponen yang membaca sesi atau data user harus berada di dalam `<Suspense>`. `lib/supabase/server.ts` memanggil `connection()` supaya selalu dirender saat request.
+- Server Action wajib memanggil `requireWorkspace`/`requireSuperAdmin` sendiri dan memakai `refresh()` dari `next/cache` setelah mengubah data.
+- Pembuatan akun (`lib/accounts.ts`) memakai Admin API; pemanggil harus sudah memeriksa hak akses. Keanggotaan tetap ditulis lewat client sesi supaya RLS ikut memeriksa.
 
 Di laptop pengembang (Windows), Node ada di `C:\Program Files\nodejs`. Jika `node` tidak ditemukan di Bash, tambahkan ke PATH.
 
