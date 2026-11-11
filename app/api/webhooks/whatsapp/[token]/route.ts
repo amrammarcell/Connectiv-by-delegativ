@@ -1,4 +1,4 @@
-import { whatsappEnv } from "@/lib/env.server";
+import { whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firstField, parseEnvelope, safeEqual, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
 
@@ -14,8 +14,21 @@ function notFound() {
   return new Response("Not found", { status: 404 });
 }
 
+// Env yang belum lengkap dilaporkan sebagai 503 dengan nama variabelnya
+// (tanpa nilai), supaya mudah dibetulkan di Vercel.
+function loadEnv(): WhatsappEnv | Response {
+  try {
+    return whatsappEnv();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Konfigurasi webhook tidak valid.";
+    console.error("whatsapp webhook env", message);
+    return new Response(message, { status: 503 });
+  }
+}
+
 export async function GET(request: Request, ctx: RouteContext<"/api/webhooks/whatsapp/[token]">) {
-  const env = whatsappEnv();
+  const env = loadEnv();
+  if (env instanceof Response) return env;
   const { token } = await ctx.params;
   if (!safeEqual(token, env.WHATSAPP_WEBHOOK_PATH_TOKEN)) return notFound();
 
@@ -25,7 +38,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/webhooks/wha
 }
 
 export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/whatsapp/[token]">) {
-  const env = whatsappEnv();
+  const env = loadEnv();
+  if (env instanceof Response) return env;
   const { token } = await ctx.params;
   if (!safeEqual(token, env.WHATSAPP_WEBHOOK_PATH_TOKEN)) return notFound();
 
