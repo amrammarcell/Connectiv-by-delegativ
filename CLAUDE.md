@@ -25,7 +25,10 @@ npm run build
 npx supabase db push --remote   # terapkan migrasi ke project dev (tanpa Docker)
 npm run seed:dev    # workspace /w/demo + akun QA (kredensial di .qa-credentials.json)
 npm run admin:promote -- email   # jadikan akun Super Admin
+npm run webhook:tokens   # buat token webhook WhatsApp di .env.local (tidak dicetak)
 ```
+
+Webhook WhatsApp: `app/api/webhooks/whatsapp/[token]/route.ts`. Lewat Dualhook, signature Meta tidak bisa diverifikasi (secret milik Dualhook), jadi token rahasia di URL wajib. Payload mentah selalu disimpan ke `webhook_events` sebelum membalas 200. Lihat `docs/BSP.md`.
 
 `npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi.
 

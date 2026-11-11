@@ -1,7 +1,7 @@
 # PRD — WhatsApp CRM dengan Atribusi Meta Ads
 **Fase:** Pilot + MVP (Tahap 1 & 2)
 **Pemilik produk:** Delegativ (PT Trinitas Delegasi Kreatif)
-**Status:** Draft v0.2
+**Status:** Draft v0.3
 **Nama produk:** Connectiv
 **Bahasa UI:** Indonesia
 
@@ -90,7 +90,7 @@ CS tetap membalas dari aplikasi WhatsApp Business di HP seperti biasa (memakai f
 
 **Termasuk di MVP**
 - Login dan workspace per klien (multi-tenant).
-- Koneksi nomor WhatsApp (disetup manual oleh admin Delegativ selama pilot).
+- Koneksi nomor WhatsApp per sales lewat tombol "Tambah nomor" (Embedded Signup resmi Meta, Coexistence), dengan auto-assign kontak ke sales pemilik nomor.
 - Penerimaan webhook dan penyimpanan pesan.
 - Inbox mirroring (read-only, realtime).
 - Indikator waktu tanggapan per chat (menunggu balasan / sudah dibalas, dengan warna batas waktu).
@@ -105,7 +105,7 @@ CS tetap membalas dari aplikasi WhatsApp Business di HP seperti biasa (memakai f
 - Membalas chat dari CRM.
 - Analisa chat dengan AI.
 - Billing langganan dan payment gateway.
-- Onboarding mandiri lewat Embedded Signup (butuh status Tech Provider).
+- Pendaftaran klien baru secara mandiri (self-serve signup + billing).
 - Broadcast dan template marketing.
 - Aplikasi mobile.
 
@@ -124,10 +124,14 @@ CS tetap membalas dari aplikasi WhatsApp Business di HP seperti biasa (memakai f
 - Setiap data (kontak, pesan, iklan) terikat ke satu workspace.
 - User dari workspace A tidak bisa mengakses data workspace B dalam kondisi apa pun (diuji secara eksplisit).
 
-**F2. Koneksi nomor WhatsApp**
-- Super Admin bisa menambahkan nomor ke workspace (phone_number_id, WABA ID, label).
-- Satu workspace bisa punya lebih dari satu nomor.
-- Status koneksi terlihat (aktif / terputus / pesan terakhir diterima kapan).
+**F2. Koneksi nomor WhatsApp per sales**
+- Owner atau Supervisor membuka **Pengaturan → Nomor WhatsApp → Tambah nomor**, mengisi label (mis. "Dewi – Sales 1") dan memilih CS pemilik nomor.
+- Tombol membuka popup resmi Meta (Embedded Signup, Coexistence). Sales memindai QR atau mengonfirmasi dari aplikasi WhatsApp Business di HP-nya. Cukup sekali per nomor; tidak ada scan ulang.
+- Setelah tersambung, sistem otomatis berlangganan webhook nomor itu dan meminta sinkronisasi kontak + riwayat chat (wajib dalam 24 jam).
+- Satu workspace bisa punya banyak nomor; setiap nomor punya satu CS pemilik (opsional).
+- Status koneksi terlihat per nomor: aktif / terputus / pesan terakhir diterima kapan, plus peringatan jika aplikasi di HP tidak dibuka mendekati 14 hari.
+- Syarat nomor: WhatsApp Business App (bukan WhatsApp biasa) versi 2.24.17+, sudah aktif dipakai. Batas awal Tech Provider: 10 nomor baru per minggu (semua klien).
+- Super Admin tetap bisa menambah nomor secara manual (phone_number_id, WABA ID) untuk keperluan uji.
 
 **F3. Penerimaan webhook**
 - Endpoint memverifikasi verify token (saat pendaftaran) dan signature setiap request.
@@ -158,7 +162,8 @@ CS tetap membalas dari aplikasi WhatsApp Business di HP seperti biasa (memakai f
 **F5. Kontak**
 - Kontak dibuat otomatis saat pesan pertama masuk.
 - Deduplikasi berdasarkan nomor HP per workspace.
-- Supervisor bisa assign kontak ke CS tertentu.
+- Kontak baru otomatis di-assign ke CS pemilik nomor yang menerima chat pertama.
+- Supervisor bisa mengubah assign kontak ke CS lain.
 - Catatan internal per kontak.
 
 **F6. Pipeline**
@@ -197,7 +202,7 @@ CS tetap membalas dari aplikasi WhatsApp Business di HP seperti biasa (memakai f
 - Filter rentang tanggal dan nomor WA.
 
 ### 3.4 Keterbatasan yang sudah diketahui
-- **Satu nomor dipakai beberapa CS:** balasan dari HP tidak menunjukkan CS mana yang mengetik. Kinerja per CS dihitung berdasarkan kontak yang di-assign, bukan dari siapa yang membalas.
+- **Satu nomor dipakai beberapa CS:** balasan dari HP tidak menunjukkan CS mana yang mengetik. Kinerja per CS dihitung berdasarkan kontak yang di-assign. Disarankan **satu nomor per sales** supaya kecepatan respon dan closing per sales akurat.
 - **Chat organik** (bukan dari iklan) tidak punya data atribusi.
 - **Riwayat chat lama** hanya tersedia sejauh yang disinkronkan saat onboarding.
 
@@ -210,7 +215,7 @@ CS tetap membalas dari aplikasi WhatsApp Business di HP seperti biasa (memakai f
 | `workspaces` | id, nama, batas_kuning_menit, batas_merah_menit, dibuat_pada |
 | `users` | id, email, nama |
 | `memberships` | user_id, workspace_id, peran |
-| `wa_numbers` | id, workspace_id, phone_number_id, waba_id, label, status, terakhir_terima_pesan |
+| `wa_numbers` | id, workspace_id, phone_number_id, waba_id, label, cs_pemilik, status, terakhir_terima_pesan, tersambung_pada |
 | `contacts` | id, workspace_id, nomor_hp, nama, assigned_to, stage_id, ad_id, ctwa_clid, sumber, pesan_terakhir_pada, arah_pesan_terakhir, menunggu_balasan_sejak, dibuat_pada |
 | `messages` | id, workspace_id, contact_id, wa_number_id, wa_message_id (unik), arah (masuk/keluar), tipe, isi, media_url, dikirim_pada |
 | `stages` | id, workspace_id, nama, urutan, tipe (normal/closing/lost) |

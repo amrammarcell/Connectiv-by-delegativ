@@ -25,20 +25,36 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - [x] 🤖 Admin: buat workspace + Owner (password sementara ditampilkan sekali)
 - [x] 🤖 Pengaturan → User: Owner menambah Supervisor/CS, ubah peran, hapus anggota
 - [x] 🤖 Test isolasi: 18 test RLS (dua workspace, tiga peran, user luar, anonim)
-- [ ] 👤 Buat akun sendiri di Supabase → Authentication → Users, lalu `npm run admin:promote -- email`
+- [x] 👤 Buat akun sendiri di Supabase → Authentication → Users, lalu `npm run admin:promote -- email`
 - [ ] 👤 Matikan pendaftaran publik: Supabase → Authentication → Sign In / Providers → "Allow new users to sign up" off
 - ✅ User dua workspace tidak bisa saling melihat data (dibuktikan test) — **selesai**
 
 ## Sprint 2 — Webhook + adapter + pesan
-- [ ] 👤 Pilih BSP (checklist PRD 2.5), daftarkan URL webhook staging
-- [ ] 🤖 Migrasi: `wa_numbers`, `contacts`, `messages`, `stages`, `stage_history`, `webhook_events`
-- [ ] 🤖 Fixture payload dari dokumentasi Meta: text, image, document, audio, referral CTWA, `smb_message_echoes`, `history`, status
-- [ ] 🤖 `signature.ts` + route GET/POST webhook, simpan mentah, `after()`
+- [x] 👤 Pilih jalur: **Tech Provider Delegativ sendiri** (resmi, tanpa BSP). Lihat `docs/TECH-PROVIDER.md`, latar belakang di `docs/BSP.md`
+- [ ] 👤 Isi alamat dan email kontak di `lib/company.ts` (dipakai halaman legal)
+- [ ] 👤 Tech Provider tahap 0–3: dokumen PT, domain, Business Portfolio, app Meta, verifikasi bisnis, App Review
+- [x] 🤖 Halaman legal publik: `/kebijakan-privasi`, `/syarat-ketentuan`, `/hapus-data`
+- [ ] 👤 (Opsional) Dualhook trial untuk uji nomor internal sambil menunggu App Review
+- [x] 🤖 Migrasi `webhook_events` (RLS: hanya server)
+- [ ] 🤖 Migrasi: `wa_numbers`, `contacts`, `messages`, `stage_history`
+- [ ] 🤖 Fixture payload: text, image, document, audio, referral CTWA, `smb_message_echoes`, `history`, status (utamakan payload asli dari uji Dualhook)
+- [x] 🤖 Route GET/POST `/api/webhooks/whatsapp/[token]`: token rahasia di URL, verify token, signature opsional, simpan mentah
+- [ ] 🤖 Proses setelah simpan dengan `after()`
 - [ ] 🤖 Adapter Meta → `NormalizedEvent` (+ test per fixture)
 - [ ] 🤖 Processor: routing workspace, upsert kontak, insert pesan idempoten, kolom denormalisasi, atribusi first-touch (+ test)
 - [ ] 🤖 Unduh media ke Storage privat + signed URL
 - [ ] 🤖 Cron retry webhook gagal
-- [ ] 🤖 Admin: tambah nomor WA ke workspace, status koneksi
+- [ ] 🤖 Admin: tambah nomor WA manual (untuk uji), status koneksi
+- [ ] 👤 Buat app "Connectiv" di Meta for Developers, sambungkan nomor tes gratis ke webhook staging
+
+## Sprint 2b — Nomor WhatsApp per sales (setelah App Review lolos)
+- [ ] 🤖 Migrasi: `wa_numbers.cs_pemilik`, `tersambung_pada`, `sync_kontak_pada`, `sync_riwayat_pada`; token bisnis tersimpan terenkripsi
+- [ ] 🤖 Pengaturan → Nomor WhatsApp: daftar nomor, label, CS pemilik, status, pesan terakhir, peringatan 14 hari
+- [ ] 🤖 Tombol "Tambah nomor": Facebook JS SDK + Embedded Signup (Coexistence), tangkap `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING`
+- [ ] 🤖 Server: tukar `code` → business token, `POST /<WABA_ID>/subscribed_apps`, simpan nomor
+- [ ] 🤖 Sync kontak lalu riwayat (`/<PHONE_NUMBER_ID>/smb_app_data`) otomatis dalam 24 jam, dengan status di UI
+- [ ] 🤖 Processor: kontak baru otomatis di-assign ke `cs_pemilik` nomor penerima (+ test)
+- ✅ Owner menambah nomor sales sendiri dari dashboard, chat-nya masuk dan langsung di-assign ke sales tersebut
 - ✅ Chat di nomor internal muncul di database, tanpa duplikat
 
 ## Sprint 3 — Inbox mirroring + waktu tanggapan

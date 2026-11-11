@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/kebijakan-privasi", "/syarat-ketentuan", "/hapus-data"];
 
 // Menyegarkan sesi Supabase di setiap request dan mengarahkan pengunjung yang
 // belum login ke /login. Hak akses per workspace diperiksa di lib/auth.ts dan RLS.

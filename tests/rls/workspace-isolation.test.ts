@@ -213,6 +213,17 @@ describe.skipIf(!enabled)("RLS: isolasi workspace", { timeout: 60_000 }, () => {
     });
   });
 
+  describe("webhook_events", () => {
+    it("tidak bisa dibaca atau ditulis oleh user mana pun, termasuk Owner", async () => {
+      const read = await ownerA.client.from("webhook_events").select("id").limit(1);
+      expect(read.data ?? []).toEqual([]);
+      const write = await ownerA.client
+        .from("webhook_events")
+        .insert({ payload_mentah: { object: "whatsapp_business_account", entry: [] } });
+      expect(write.error).not.toBeNull();
+    });
+  });
+
   describe("profil", () => {
     it("user tidak bisa menjadikan dirinya Super Admin", async () => {
       const { error } = await csA.client.from("profiles").update({ is_super_admin: true }).eq("id", csA.id);

@@ -140,7 +140,7 @@ erDiagram
 | `workspaces` | id, nama, ➕slug (unik), batas_kuning_menit (15), batas_merah_menit (60), ➕zona_waktu | slug dipakai di URL `/w/[slug]` |
 | ➕`profiles` | id (= `auth.users.id`), email, nama, ➕is_super_admin | pengganti tabel `users` karena auth dikelola Supabase |
 | `memberships` | user_id, workspace_id, peran (`owner`/`supervisor`/`cs`) | PK gabungan |
-| `wa_numbers` | id, workspace_id, phone_number_id (**unik global**), waba_id, label, nomor_tampil, status, terakhir_terima_pesan | `phone_number_id` dari webhook menentukan workspace |
+| `wa_numbers` | id, workspace_id, phone_number_id (**unik global**), waba_id, label, nomor_tampil, ➕cs_pemilik (→ profiles), status, terakhir_terima_pesan, ➕tersambung_pada, ➕sync_kontak_pada, ➕sync_riwayat_pada | `phone_number_id` dari webhook menentukan workspace; `cs_pemilik` dipakai auto-assign |
 | `contacts` | id, workspace_id, nomor_hp (E.164), nama, assigned_to, stage_id, ad_id, ctwa_clid, ➕referral_headline, ➕referral_source_url, sumber (`ctwa`/`organik`), pesan_terakhir_pada, ➕pesan_terakhir_cuplikan, arah_pesan_terakhir, menunggu_balasan_sejak, ➕wa_number_id_terakhir, dibuat_pada | **unik (workspace_id, nomor_hp)** |
 | `messages` | id, workspace_id, contact_id, wa_number_id, wa_message_id (**unik**), arah (`masuk`/`keluar`), tipe, isi, ➕media_path, ➕media_mime, ➕dari_history, dikirim_pada | `media_path` = path di Storage, bukan URL Meta |
 | `stages` | id, workspace_id, nama, urutan, tipe (`normal`/`closing`/`lost`) | dibuat otomatis saat workspace dibuat |
@@ -241,6 +241,7 @@ type NormalizedEvent =
 | Selalu | perbarui `pesan_terakhir_pada`, `arah_pesan_terakhir`, cuplikan **hanya jika `sentAt` lebih baru** (aman untuk history yang datang tidak urut) |
 | Kontak di stage Closing/Lost menerima pesan masuk baru (bukan history) | buka ulang ke "Baru" (lihat keputusan §4) |
 | `wa_numbers.terakhir_terima_pesan` | diperbarui setiap event, dasar status koneksi |
+| Kontak baru dan nomor penerima punya `cs_pemilik` | `contacts.assigned_to = cs_pemilik` |
 
 ---
 
