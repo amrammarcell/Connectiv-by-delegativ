@@ -45,7 +45,8 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - [ ] 🤖 Unduh media ke Storage privat + signed URL
 - [ ] 🤖 Cron retry webhook gagal
 - [ ] 🤖 Admin: tambah nomor WA manual (untuk uji), status koneksi
-- [ ] 👤 Buat app "Connectiv" di Meta for Developers, sambungkan nomor tes gratis ke webhook staging
+- [x] 👤 Buat app "Connectiv" di Meta for Developers, sambungkan nomor tes gratis ke webhook (chat asli masuk 18 Nov 2026)
+- [ ] 👤 Pasang `WHATSAPP_APP_SECRET` di Vercel supaya signature webhook diverifikasi
 
 ## Sprint 2b — Nomor WhatsApp per sales (setelah App Review lolos)
 - [ ] 🤖 Migrasi: `wa_numbers.cs_pemilik`, `tersambung_pada`, `sync_kontak_pada`, `sync_riwayat_pada`; token bisnis tersimpan terenkripsi

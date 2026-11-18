@@ -1,0 +1,41 @@
+{
+  "entry": [
+    {
+      "id": "1785116869270754",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "contacts": [
+              {
+                "wa_id": "6281200000001",
+                "profile": {
+                  "name": "Pelanggan Uji"
+                },
+                "user_id": "ID.0000000000000000001"
+              }
+            ],
+            "messages": [
+              {
+                "id": "wamid.UJI-INBOUND-TEXT",
+                "from": "6281200000001",
+                "text": {
+                  "body": "Test connectiv 1"
+                },
+                "type": "text",
+                "timestamp": "1794979022",
+                "from_user_id": "ID.0000000000000000001"
+              }
+            ],
+            "metadata": {
+              "phone_number_id": "1502132426306454",
+              "display_phone_number": "15551661742"
+            },
+            "messaging_product": "whatsapp"
+          }
+        }
+      ]
+    }
+  ],
+  "object": "whatsapp_business_account"
+}

@@ -51,3 +51,13 @@ Migrasi baru ditulis di `supabase/migrations/<timestamp>_<nama>.sql`. Tanpa Dock
 - **Workspace dan Owner klien**: dibuat dari `/admin`. Owner menambah Supervisor/CS dari **Pengaturan**. Akun baru mendapat password sementara yang ditampilkan sekali; user menggantinya lewat menu **Ganti password**.
 - **Pendaftaran publik dimatikan**: Supabase → **Authentication → Sign In / Providers** → matikan *Allow new users to sign up*. Akun hanya dibuat oleh admin atau Owner.
 - **Data demo (khusus dev)**: `npm run seed:dev` membuat workspace `/w/demo` dan akun QA Owner + CS. Kredensialnya ditulis ke `.qa-credentials.json` (tidak di-commit).
+
+## 6. Nomor tes WhatsApp (app Meta "Connectiv")
+
+App ID `1432513006614956`, nomor tes `+1 555 166 1742`, WABA (Messaging account) `1785116869270754`.
+
+1. Webhook: **Connect on WhatsApp → Step 2. Production setup → Configure Webhooks**. Callback URL `https://<domain>/api/webhooks/whatsapp/<WHATSAPP_WEBHOOK_PATH_TOKEN>`, Verify token `WHATSAPP_VERIFY_TOKEN`, subscribe field `messages`.
+2. App harus **Published**; sebelum itu Meta hanya mengirim webhook tes dari dashboard.
+3. **Wajib**: langganankan app ke WABA. Di [Graph API Explorer](https://developers.facebook.com/tools/explorer/), app Connectiv, user token dengan `whatsapp_business_management` + `whatsapp_business_messaging`, lalu `POST 1785116869270754/subscribed_apps` → `{"success": true}`. Cek dengan `GET` di path yang sama: Connectiv harus ada di daftar. Tanpa ini chat asli tidak diteruskan.
+4. Nomor HP penerima didaftarkan di **Step 1. Try it out → Recipient** (maks. 5).
+5. Lihat webhook yang masuk: `npm run webhook:latest` (tambah `-- 3 --raw` untuk payload lengkap).
