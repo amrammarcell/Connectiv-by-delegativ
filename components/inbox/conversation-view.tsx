@@ -9,6 +9,7 @@ import { responseStatus, type Thresholds } from "@/lib/response-time";
 import { subscribeWithAuth } from "@/lib/supabase/realtime";
 import { cn } from "@/lib/utils";
 import { AssignSelect, StageSelect } from "@/components/contacts/contact-controls";
+import { DealButtons } from "@/components/deals/deal-dialog";
 import type { Member, Stage } from "@/lib/workspace-data";
 import { ResponseBadge } from "./response-badge";
 import { MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "./types";
@@ -127,6 +128,9 @@ export function ConversationView({
           >
             Detail & catatan
           </Link>
+          {stages.find((s) => s.id === contact.stage_id)?.tipe === "normal" && (
+            <DealButtons slug={slug} contactId={contact.id} contactName={name} />
+          )}
         </div>
       </div>
 

@@ -80,10 +80,14 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - ✅ Kontak bisa dipindah antar stage, riwayat tercatat — **selesai** (diuji drag & drop di browser)
 
 ## Sprint 5 — Closing/Lost + atribusi
-- [ ] 🤖 Migrasi `deals`, dialog Closing (nilai Rupiah wajib) & Lost (alasan tetap + catatan untuk "Lainnya")
-- [ ] 🤖 Badge iklan asal di inbox, kontak, kanban; "Organik / Tidak diketahui"
-- [ ] 🤖 Riwayat deal di detail kontak
-- ✅ Kontak dari iklan menampilkan nama iklannya, Closing/Lost tersimpan dengan data wajib
+- [x] 🤖 Migrasi `deals` + fungsi `close_contact` (deal + pindah stage dalam satu transaksi), RLS: deal tidak bisa diubah/dihapus
+- [x] 🤖 Dialog Closing (nilai Rupiah wajib) & Lost (alasan tetap, catatan wajib untuk "Lainnya")
+- [x] 🤖 Kartu pipeline seperti mockup: "Ke stage berikutnya", Closing, Lost; seret ke kolom Closing/Lost membuka dialog
+- [x] 🤖 Tombol Tandai Closing/Lost di header percakapan Inbox dan detail kontak; riwayat deal di detail kontak
+- [x] 🤖 Total nilai Closing di kolom pipeline
+- [x] 🤖 Badge iklan asal di inbox, kontak, kanban; "Organik / Tidak diketahui"
+- [ ] 🤖 Nama iklan dari Meta (tabel `ads`) menggantikan headline referral setelah sync Sprint 6
+- ✅ Kontak dari iklan menampilkan nama iklannya, Closing/Lost tersimpan dengan data wajib — **selesai**
 
 ## Sprint 6 — Sinkronisasi Meta Ads + dashboard
 - [ ] 👤 Buat system user di Business Manager Delegativ, minta akses partner read-only ke ad account klien

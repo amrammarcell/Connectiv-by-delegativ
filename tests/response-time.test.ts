@@ -63,3 +63,24 @@ describe("formatDateTime", () => {
     expect(formatDateTime("2026-11-12T06:30:00Z", ref)).toBe("12 Nov 13.30");
   });
 });
+
+describe("deals helpers", () => {
+  it("parseRupiah membaca angka dengan titik dan menolak nol", async () => {
+    const { parseRupiah, formatRupiah } = await import("@/lib/deals");
+    expect(parseRupiah("1.250.000")).toBe(1_250_000);
+    expect(parseRupiah("Rp 685.000")).toBe(685_000);
+    expect(parseRupiah("0")).toBeNull();
+    expect(parseRupiah("")).toBeNull();
+    expect(formatRupiah(1_250_000)).toBe("Rp 1.250.000");
+  });
+
+  it("latestDealByContact mengambil deal terbaru per kontak", async () => {
+    const { latestDealByContact } = await import("@/lib/deals");
+    const base = { nilai: null, alasan_lost: null, catatan: null, oleh_user: null };
+    const result = latestDealByContact([
+      { ...base, id: "1", contact_id: "a", status: "lost", alasan_lost: "harga", pada: "2026-11-01T00:00:00Z" },
+      { ...base, id: "2", contact_id: "a", status: "closing", nilai: 5, pada: "2026-11-10T00:00:00Z" },
+    ]);
+    expect(result.a?.id).toBe("2");
+  });
+});

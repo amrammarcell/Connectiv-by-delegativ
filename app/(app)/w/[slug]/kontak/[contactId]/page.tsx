@@ -5,7 +5,9 @@ import { Suspense } from "react";
 import { ArrowLeft, Megaphone, MessagesSquare } from "lucide-react";
 import { AssignSelect, StageSelect } from "@/components/contacts/contact-controls";
 import { ContactNotes, type Note } from "@/components/contacts/contact-notes";
+import { DealButtons } from "@/components/deals/deal-dialog";
 import { CONTACT_COLUMNS, type InboxContact } from "@/components/inbox/types";
+import { ALASAN_LABEL, DEAL_COLUMNS, formatRupiah, type Deal } from "@/lib/deals";
 import { formatDateTime, formatPhone } from "@/lib/format";
 import { getInboxLookups } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
@@ -39,7 +41,7 @@ async function ContactDetail({ params }: { params: Promise<{ slug: string; conta
     .maybeSingle<InboxContact & { ctwa_clid: string | null; referral_source_url: string | null; referral_pada: string | null; dibuat_pada: string }>();
   if (!contact) notFound();
 
-  const [{ data: notes }, { data: history }] = await Promise.all([
+  const [{ data: notes }, { data: history }, { data: deals }] = await Promise.all([
     supabase
       .from("contact_notes")
       .select("id, isi, pada, oleh_user")
@@ -53,6 +55,12 @@ async function ContactDetail({ params }: { params: Promise<{ slug: string; conta
       .order("pada", { ascending: false })
       .limit(50)
       .returns<{ id: string; dari_stage: string | null; ke_stage: string | null; oleh_user: string | null; pada: string }[]>(),
+    supabase
+      .from("deals")
+      .select(DEAL_COLUMNS)
+      .eq("contact_id", contact.id)
+      .order("pada", { ascending: false })
+      .returns<Deal[]>(),
   ]);
 
   const canAssign = access.canManage || access.peran === "supervisor";
@@ -111,7 +119,31 @@ async function ContactDetail({ params }: { params: Promise<{ slug: string; conta
             <p className="text-xs text-muted-foreground" suppressHydrationWarning>
               Kontak dibuat {formatDateTime(contact.dibuat_pada)}
             </p>
+            {stages.find((s) => s.id === contact.stage_id)?.tipe === "normal" && (
+              <DealButtons slug={slug} contactId={contact.id} contactName={name} className="border-t pt-4" />
+            )}
           </section>
+
+          {!!deals?.length && (
+            <section aria-labelledby="h-deal" className="rounded-xl border bg-card p-5">
+              <h2 id="h-deal" className="text-base font-bold">
+                Riwayat deal
+              </h2>
+              <ul className="mt-3 flex flex-col gap-2.5">
+                {deals.map((d) => (
+                  <li key={d.id} className="flex flex-col text-sm">
+                    <span className={d.status === "closing" ? "font-semibold text-[#05603a]" : "font-semibold text-[#b42318]"}>
+                      {d.status === "closing" ? `Closing · ${formatRupiah(d.nilai ?? 0)}` : `Lost · ${ALASAN_LABEL[d.alasan_lost!]}`}
+                    </span>
+                    {d.catatan && <span className="text-muted-foreground">{d.catatan}</span>}
+                    <span className="text-xs text-muted-foreground" suppressHydrationWarning>
+                      {d.oleh_user ? (people[d.oleh_user] ?? "Pengguna") : "Sistem"} · {formatDateTime(d.pada)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section aria-labelledby="h-atribusi" className="flex gap-3 rounded-xl border bg-card p-5">
             <span

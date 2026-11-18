@@ -19,6 +19,7 @@ import { Brand } from "@/components/brand";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -69,13 +70,15 @@ export function AppSidebar({ workspace, workspaces, user, peran }: Props) {
           <ChevronsUpDown aria-hidden className="size-4 shrink-0" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Ganti workspace</DropdownMenuLabel>
-          {workspaces.map((w) => (
-            <DropdownMenuItem key={w.slug} render={<Link href={`/w/${w.slug}/inbox`} />}>
-              <span className="flex-1 truncate">{w.nama}</span>
-              {w.slug === workspace.slug && <Check aria-hidden className="size-4" />}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Ganti workspace</DropdownMenuLabel>
+            {workspaces.map((w) => (
+              <DropdownMenuItem key={w.slug} render={<Link href={`/w/${w.slug}/inbox`} />}>
+                <span className="flex-1 truncate">{w.nama}</span>
+                {w.slug === workspace.slug && <Check aria-hidden className="size-4" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
           {user.isSuperAdmin && (
             <>
               <DropdownMenuSeparator />
@@ -123,11 +126,13 @@ export function AppSidebar({ workspace, workspaces, user, peran }: Props) {
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="top" className="w-56">
-          <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
-          <DropdownMenuItem render={<Link href="/akun" />}>
-            <KeyRound aria-hidden className="size-4" />
-            Ganti password
-          </DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
+            <DropdownMenuItem render={<Link href="/akun" />}>
+              <KeyRound aria-hidden className="size-4" />
+              Ganti password
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut()}>
             <LogOut aria-hidden className="size-4" />
