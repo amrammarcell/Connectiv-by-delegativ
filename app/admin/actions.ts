@@ -89,7 +89,10 @@ export async function addWaNumber(_prev: FormState, formData: FormData): Promise
       .maybeSingle();
     if (!member) return { error: "CS pemilik bukan anggota workspace itu." };
   }
-  const { error } = await supabase.from("wa_numbers").insert({
+  // wa_numbers tidak bisa ditulis lewat sesi user (hak kolom dicabut), jadi
+  // ditulis dengan secret key setelah requireSuperAdmin di atas.
+  const admin = createAdminClient();
+  const { error } = await admin.from("wa_numbers").insert({
     workspace_id: workspaceId,
     label,
     nomor_tampil: nomorTampil,
@@ -98,11 +101,12 @@ export async function addWaNumber(_prev: FormState, formData: FormData): Promise
     cs_pemilik: csPemilik,
   });
   if (error) {
+    console.error("addWaNumber", error.code, error.message);
     return { error: error.code === "23505" ? "Phone Number ID ini sudah terdaftar." : "Gagal menambah nomor." };
   }
 
   // Webhook yang sempat tertunda karena nomor ini belum terdaftar.
-  const result = await processPendingEvents(createAdminClient());
+  const result = await processPendingEvents(admin);
   refresh();
   return {
     success: `Nomor ${label} ditambahkan.${result.inserted ? ` ${result.inserted} pesan tertunda berhasil diproses.` : ""}`,

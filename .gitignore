@@ -46,3 +46,6 @@ next-env.d.ts
 
 # akun QA dari npm run seed:dev
 .qa-credentials.json
+
+# nilai siap-salin untuk Vercel/Dualhook (berisi token)
+.dualhook-setup.txt
