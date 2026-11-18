@@ -61,3 +61,13 @@ App ID `1432513006614956`, nomor tes `+1 555 166 1742`, WABA (Messaging account)
 3. **Wajib**: langganankan app ke WABA. Di [Graph API Explorer](https://developers.facebook.com/tools/explorer/), app Connectiv, user token dengan `whatsapp_business_management` + `whatsapp_business_messaging`, lalu `POST 1785116869270754/subscribed_apps` → `{"success": true}`. Cek dengan `GET` di path yang sama: Connectiv harus ada di daftar. Tanpa ini chat asli tidak diteruskan.
 4. Nomor HP penerima didaftarkan di **Step 1. Try it out → Recipient** (maks. 5).
 5. Lihat webhook yang masuk: `npm run webhook:latest` (tambah `-- 3 --raw` untuk payload lengkap).
+
+## 7. Data iklan Meta (spend harian)
+
+Dashboard menghitung biaya per chat, biaya per closing, dan ROAS dari spend yang ditarik setiap hari pukul 02.00 WIB (Vercel Cron `/api/cron/daily`).
+
+1. **Klien membagikan ad account ke BM Delegativ.** Di Business Manager klien: Business settings → Accounts → Ad accounts → pilih akun → Assign partners → masukkan Business ID Delegativ → izin lihat performa (View performance / Analyze).
+2. **System user di BM Delegativ.** Business settings → Users → System users → Add. Lalu Assign assets: ad account klien tadi (lihat performa) dan app **Connectiv**.
+3. **Token.** Pada system user → Generate new token → app Connectiv → izin `ads_read` → masa berlaku *Never*. Simpan ke Vercel dan `.env.local` sebagai `META_ADS_ACCESS_TOKEN`. Jika sync gagal dengan pesan izin `ads_read`, tambahkan izin itu di app (Permissions and features).
+4. **`CRON_SECRET`** di Vercel: salin dari `.env.local` (`npm run webhook:tokens` membuatnya).
+5. **Daftarkan ad account** di `/admin` → Akun iklan Meta (ID `act_…`, ada di Ads Manager), lalu klik **Sync sekarang**.

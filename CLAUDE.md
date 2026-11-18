@@ -32,6 +32,8 @@ npm run webhook:reprocess   # proses ulang webhook tertunda (mis. setelah nomor 
 
 Webhook WhatsApp: `app/api/webhooks/whatsapp/[token]/route.ts`. Lewat Dualhook, signature Meta tidak bisa diverifikasi (secret milik Dualhook), jadi token rahasia di URL wajib. Payload mentah selalu disimpan ke `webhook_events` sebelum membalas 200, lalu diproses dengan `after()`: `lib/whatsapp/adapter.ts` (format Meta → `NormalizedMessage`) → `lib/whatsapp/processor.ts` → fungsi SQL `ingest_message` (kontak, pesan, status menunggu, atribusi, dalam satu transaksi). Nomor yang belum terdaftar di `wa_numbers` membuat event tertunda. Lihat `docs/BSP.md` dan `docs/SETUP.md` §6.
 
+Data iklan: `lib/meta-ads/sync.ts` (Marketing API, 3 hari terakhir, upsert `ads` + `ad_insights_daily`), dipanggil oleh `/api/cron/daily` (Vercel Cron, `CRON_SECRET`) dan tombol Sync di `/admin`. Dashboard memakai fungsi SQL `dashboard_*` (security invoker, tanggal Asia/Jakarta, kohort kontak per tanggal dibuat); perhitungan turunan di `lib/dashboard.ts`.
+
 Realtime di klien wajib lewat `lib/supabase/realtime.ts` (`subscribeWithAuth`) supaya JWT user terpasang dan RLS berlaku.
 
 `npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi.

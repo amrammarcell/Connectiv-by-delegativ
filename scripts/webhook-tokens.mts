@@ -10,7 +10,7 @@ const current = existsSync(FILE) ? readFileSync(FILE, "utf8") : "";
 const has = (key: string) => new RegExp(`^${key}=.+`, "m").test(current);
 
 const lines: string[] = [];
-for (const key of ["WHATSAPP_WEBHOOK_PATH_TOKEN", "WHATSAPP_VERIFY_TOKEN"]) {
+for (const key of ["WHATSAPP_WEBHOOK_PATH_TOKEN", "WHATSAPP_VERIFY_TOKEN", "CRON_SECRET"]) {
   if (has(key)) {
     console.log(`${key} sudah ada, tidak diubah.`);
   } else {
@@ -22,4 +22,4 @@ for (const key of ["WHATSAPP_WEBHOOK_PATH_TOKEN", "WHATSAPP_VERIFY_TOKEN"]) {
 if (lines.length) {
   appendFileSync(FILE, `${current.endsWith("\n") || !current ? "" : "\n"}\n# Webhook WhatsApp\n${lines.join("\n")}\n`);
 }
-console.log(`Salin nilainya dari ${FILE} ke Vercel (Environment Variables) dan ke Dualhook.`);
+console.log(`Salin nilainya dari ${FILE} ke Vercel (Environment Variables).`);

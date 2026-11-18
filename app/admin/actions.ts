@@ -5,6 +5,8 @@ import { z } from "zod";
 import { ensureUser } from "@/lib/accounts";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { metaAdsEnv } from "@/lib/env.server";
+import { syncAdAccount } from "@/lib/meta-ads/sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SLUG_PATTERN } from "@/lib/text";
 import { processPendingEvents } from "@/lib/whatsapp/processor";
@@ -94,4 +96,57 @@ export async function addWaNumber(_prev: FormState, formData: FormData): Promise
   return {
     success: `Nomor ${label} ditambahkan.${result.inserted ? ` ${result.inserted} pesan tertunda berhasil diproses.` : ""}`,
   };
+}
+
+const adAccountSchema = z.object({
+  workspaceId: z.uuid({ error: "Pilih workspace." }),
+  metaAdAccountId: z
+    .string()
+    .trim()
+    .transform((v) => (v.startsWith("act_") ? v : `act_${v}`))
+    .pipe(z.string().regex(/^act_\d{5,30}$/, "ID ad account hanya angka (boleh diawali act_).")),
+  nama: z.string().trim().max(80).optional().transform((v) => v || null),
+});
+
+export async function addAdAccount(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireSuperAdmin();
+  const parsed = adAccountSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("ad_accounts").insert({
+    workspace_id: parsed.data.workspaceId,
+    meta_ad_account_id: parsed.data.metaAdAccountId,
+    nama: parsed.data.nama,
+  });
+  if (error) {
+    return { error: error.code === "23505" ? "Ad account ini sudah terdaftar di workspace itu." : "Gagal menambah ad account." };
+  }
+  refresh();
+  return { success: `Ad account ${parsed.data.metaAdAccountId} ditambahkan. Klik Sync sekarang untuk menarik data.` };
+}
+
+export async function syncAdAccountNow(adAccountId: string): Promise<FormState> {
+  await requireSuperAdmin();
+  const env = metaAdsEnv();
+  if (!env.META_ADS_ACCESS_TOKEN) return { error: "META_ADS_ACCESS_TOKEN belum diisi di environment variable." };
+
+  const supabase = await createClient();
+  const { data: account } = await supabase
+    .from("ad_accounts")
+    .select("id, workspace_id, meta_ad_account_id")
+    .eq("id", adAccountId)
+    .maybeSingle();
+  if (!account) return { error: "Ad account tidak ditemukan." };
+
+  try {
+    const result = await syncAdAccount(createAdminClient(), account, env.META_ADS_ACCESS_TOKEN, {
+      graphVersion: env.META_GRAPH_VERSION,
+    });
+    refresh();
+    return { success: `Sync selesai: ${result.rows} baris data harian.` };
+  } catch (err) {
+    refresh();
+    return { error: err instanceof Error ? err.message : "Sync gagal." };
+  }
 }

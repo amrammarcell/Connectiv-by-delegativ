@@ -90,12 +90,14 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - ✅ Kontak dari iklan menampilkan nama iklannya, Closing/Lost tersimpan dengan data wajib — **selesai**
 
 ## Sprint 6 — Sinkronisasi Meta Ads + dashboard
-- [ ] 👤 Buat system user di Business Manager Delegativ, minta akses partner read-only ke ad account klien
-- [ ] 🤖 Migrasi `ad_accounts`, `ads`, `ad_insights_daily`, `sync_runs`
-- [ ] 🤖 Job sync harian + tombol "Sync sekarang" + log error di Admin
-- [ ] 🤖 Fungsi SQL dashboard: iklan, funnel, alasan lost, waktu respon
-- [ ] 🤖 Halaman dashboard: KPI, tabel per iklan, funnel, chart lost, waktu respon, filter
-- ✅ Biaya per closing per iklan tampil
+- [ ] 👤 Buat system user di Business Manager Delegativ, minta akses partner read-only ke ad account klien (`docs/SETUP.md` §7), isi `META_ADS_ACCESS_TOKEN` + `CRON_SECRET` di Vercel
+- [x] 🤖 Migrasi `ad_accounts`, `ads`, `ad_insights_daily`, `sync_runs` (CS tidak bisa membaca data iklan)
+- [x] 🤖 Sync harian (`/api/cron/daily`, juga memproses ulang webhook tertunda) + tombol "Sync sekarang" + error di Admin
+- [x] 🤖 Fungsi SQL dashboard: iklan, funnel, alasan lost, waktu respon (median, P90, per CS)
+- [x] 🤖 Halaman dashboard: KPI, tabel per iklan (urutkan), insight chat murah, funnel, alasan Lost, waktu respon, rentang 7/30 hari/bulan ini
+- [x] 🤖 Test: 15 test (perhitungan, parsing Meta, fungsi SQL dengan data uji, RLS)
+- [ ] 🤖 Filter dashboard per nomor WA (fungsi sudah mendukung, UI belum)
+- ✅ Biaya per closing per iklan tampil — **selesai di kode**; menunggu token Meta Ads untuk data spend asli
 
 ## Sprint 7 — Uji internal & onboarding pilot
 - [ ] 👤 Perjanjian pilot + persetujuan pemrosesan data (UU PDP)

@@ -38,3 +38,22 @@ export function whatsappEnv(): WhatsappEnv {
     WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET || undefined,
   });
 }
+
+const metaAdsSchema = z.object({
+  // Token system user Business Manager Delegativ dengan izin ads_read ke ad
+  // account klien. Kosong = sinkronisasi iklan belum aktif.
+  META_ADS_ACCESS_TOKEN: z.string().min(1).optional(),
+  META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v27.0"),
+  // Dipakai Vercel Cron sebagai "Authorization: Bearer <CRON_SECRET>".
+  CRON_SECRET: z.string().min(16).optional(),
+});
+
+export type MetaAdsEnv = z.infer<typeof metaAdsSchema>;
+
+export function metaAdsEnv(): MetaAdsEnv {
+  return parseEnv(metaAdsSchema, {
+    META_ADS_ACCESS_TOKEN: process.env.META_ADS_ACCESS_TOKEN || undefined,
+    META_GRAPH_VERSION: process.env.META_GRAPH_VERSION || undefined,
+    CRON_SECRET: process.env.CRON_SECRET || undefined,
+  });
+}

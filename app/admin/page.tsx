@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AddNumberForm } from "./add-number-form";
+import { AdAccountRow, AddAdAccountForm, type AdAccountItem } from "./ad-accounts";
 import { CreateWorkspaceForm } from "./create-workspace-form";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -60,6 +61,12 @@ async function AdminContent() {
         workspaces: { nama: string; slug: string };
       }[]
     >();
+
+  const { data: adAccounts } = await supabase
+    .from("ad_accounts")
+    .select("id, meta_ad_account_id, nama, status_sync, terakhir_sync_pada, error_terakhir, workspaces(nama)")
+    .order("dibuat_pada", { ascending: false })
+    .returns<(Omit<AdAccountItem, "workspace"> & { workspaces: { nama: string } })[]>();
 
   return (
     <>
@@ -127,6 +134,24 @@ async function AdminContent() {
             </TableBody>
           </Table>
         </div>
+      </section>
+
+      <section aria-labelledby="h-iklan" className="rounded-xl border bg-card">
+        <div className="border-b px-5 py-4">
+          <h2 id="h-iklan" className="text-base font-bold">
+            Akun iklan Meta ({adAccounts?.length ?? 0})
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Spend harian per iklan ditarik otomatis setiap hari pukul 02.00 WIB. Butuh token system user dengan akses ads_read.
+          </p>
+          <AddAdAccountForm workspaces={(workspaces ?? []).map((w) => ({ id: w.id, nama: w.nama }))} />
+        </div>
+        <ul>
+          {(adAccounts ?? []).map((a) => (
+            <AdAccountRow key={a.id} account={{ ...a, workspace: a.workspaces.nama }} />
+          ))}
+          {!adAccounts?.length && <li className="px-5 py-6 text-center text-sm text-muted-foreground">Belum ada akun iklan.</li>}
+        </ul>
       </section>
 
       <section aria-labelledby="h-daftar" className="rounded-xl border bg-card">
