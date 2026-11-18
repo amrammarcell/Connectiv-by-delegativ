@@ -71,3 +71,16 @@ Dashboard menghitung biaya per chat, biaya per closing, dan ROAS dari spend yang
 3. **Token.** Pada system user → Generate new token → app Connectiv → izin `ads_read` → masa berlaku *Never*. Simpan ke Vercel dan `.env.local` sebagai `META_ADS_ACCESS_TOKEN`. Jika sync gagal dengan pesan izin `ads_read`, tambahkan izin itu di app (Permissions and features).
 4. **`CRON_SECRET`** di Vercel: salin dari `.env.local` (`npm run webhook:tokens` membuatnya).
 5. **Daftarkan ad account** di `/admin` → Akun iklan Meta (ID `act_…`, ada di Ads Manager), lalu klik **Sync sekarang**.
+
+## 8. Nomor klien lewat Dualhook (sementara, sebelum Tech Provider aktif)
+
+Dualhook dipakai atas nama klien (nomor milik klien sendiri). Webhook-nya memakai URL terpisah karena Meta menandatangani dengan app secret Dualhook.
+
+1. Vercel: tambahkan `WHATSAPP_DUALHOOK_PATH_TOKEN` dan `WHATSAPP_DUALHOOK_VERIFY_TOKEN` (salin dari `.env.local`, dibuat oleh `npm run webhook:tokens`), lalu Redeploy.
+2. Dashboard Dualhook → **New Connection** (satu per nomor):
+   - Webhook URL: `https://<domain>/api/webhooks/whatsapp/<WHATSAPP_DUALHOOK_PATH_TOKEN>`
+   - Verify token: `WHATSAPP_DUALHOOK_VERIFY_TOKEN`
+   - Embedded Signup dengan **Business Portfolio milik klien**; HP CS memakai WhatsApp Business 2.24.17+; izinkan berbagi riwayat chat.
+   - Klik **Test Ping** (harus sukses).
+3. Salin **Phone Number ID** dan **WABA ID** dari Dualhook ke `/admin` → Nomor WhatsApp (pilih workspace klien, label, CS pemilik). Webhook yang sempat masuk sebelum nomor didaftarkan langsung diproses.
+4. Pindah ke jalur resmi nanti: di HP, WhatsApp Business → Settings → Account → Business Platform → Disconnect, lalu sambungkan ulang lewat Connectiv. Data kontak dan pesan tetap.

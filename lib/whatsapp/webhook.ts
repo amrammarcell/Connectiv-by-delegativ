@@ -49,3 +49,31 @@ export function parseEnvelope(rawBody: string): WebhookEnvelope | null {
 export function firstField(envelope: WebhookEnvelope): string | null {
   return envelope.entry[0]?.changes[0]?.field ?? null;
 }
+
+export type WebhookSource = {
+  sumber: "meta" | "dualhook";
+  verifyToken: string;
+  // null = signature tidak diverifikasi (Dualhook memakai secret mereka).
+  appSecret: string | null;
+};
+
+// Token rahasia di URL menentukan sumber webhook: app Meta milik kita sendiri
+// (signature diverifikasi jika app secret diisi) atau Dualhook.
+export function resolveWebhookSource(
+  token: string,
+  env: {
+    WHATSAPP_WEBHOOK_PATH_TOKEN: string;
+    WHATSAPP_VERIFY_TOKEN: string;
+    WHATSAPP_APP_SECRET?: string;
+    WHATSAPP_DUALHOOK_PATH_TOKEN?: string;
+    WHATSAPP_DUALHOOK_VERIFY_TOKEN?: string;
+  },
+): WebhookSource | null {
+  if (safeEqual(token, env.WHATSAPP_WEBHOOK_PATH_TOKEN)) {
+    return { sumber: "meta", verifyToken: env.WHATSAPP_VERIFY_TOKEN, appSecret: env.WHATSAPP_APP_SECRET ?? null };
+  }
+  if (env.WHATSAPP_DUALHOOK_PATH_TOKEN && env.WHATSAPP_DUALHOOK_VERIFY_TOKEN && safeEqual(token, env.WHATSAPP_DUALHOOK_PATH_TOKEN)) {
+    return { sumber: "dualhook", verifyToken: env.WHATSAPP_DUALHOOK_VERIFY_TOKEN, appSecret: null };
+  }
+  return null;
+}

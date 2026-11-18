@@ -27,6 +27,10 @@ const whatsappSchema = z.object({
   // Opsional: hanya ada jika webhook ditandatangani app Meta milik kita sendiri
   // (Tech Provider). Lewat Dualhook, signature memakai secret mereka.
   WHATSAPP_APP_SECRET: z.string().min(1).optional(),
+  // URL terpisah untuk nomor yang tersambung lewat Dualhook (signature memakai
+  // secret Dualhook, jadi tidak diverifikasi). Kosong = jalur Dualhook mati.
+  WHATSAPP_DUALHOOK_PATH_TOKEN: z.string().min(24).optional(),
+  WHATSAPP_DUALHOOK_VERIFY_TOKEN: z.string().min(16).optional(),
 });
 
 export type WhatsappEnv = z.infer<typeof whatsappSchema>;
@@ -36,6 +40,8 @@ export function whatsappEnv(): WhatsappEnv {
     WHATSAPP_WEBHOOK_PATH_TOKEN: process.env.WHATSAPP_WEBHOOK_PATH_TOKEN,
     WHATSAPP_VERIFY_TOKEN: process.env.WHATSAPP_VERIFY_TOKEN,
     WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET || undefined,
+    WHATSAPP_DUALHOOK_PATH_TOKEN: process.env.WHATSAPP_DUALHOOK_PATH_TOKEN || undefined,
+    WHATSAPP_DUALHOOK_VERIFY_TOKEN: process.env.WHATSAPP_DUALHOOK_VERIFY_TOKEN || undefined,
   });
 }
 

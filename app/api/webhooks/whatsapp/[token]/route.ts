@@ -2,14 +2,16 @@ import { after } from "next/server";
 import { whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { processWebhookEvent } from "@/lib/whatsapp/processor";
-import { firstField, parseEnvelope, safeEqual, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
+import { firstField, parseEnvelope, resolveWebhookSource, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
 
 // Penerima webhook WhatsApp: simpan payload mentah ke webhook_events, balas
 // 200, lalu proses menjadi kontak dan pesan dengan after().
 //
-// Lewat Dualhook, Meta menandatangani payload dengan app secret Dualhook yang
-// tidak bisa kita ketahui. Maka keaslian dijaga oleh token rahasia di URL,
-// pemeriksaan bentuk payload, dan (nanti) pencocokan phone_number_id terdaftar.
+// Dua URL dengan token rahasia berbeda:
+// - app Meta milik Delegativ: signature X-Hub-Signature-256 diverifikasi;
+// - Dualhook: Meta menandatangani dengan app secret Dualhook yang tidak bisa
+//   kita ketahui, jadi keaslian dijaga token URL, bentuk payload, dan nomor
+//   yang harus terdaftar di wa_numbers sebelum pesan diproses.
 
 function notFound() {
   return new Response("Not found", { status: 404 });
@@ -30,10 +32,10 @@ function loadEnv(): WhatsappEnv | Response {
 export async function GET(request: Request, ctx: RouteContext<"/api/webhooks/whatsapp/[token]">) {
   const env = loadEnv();
   if (env instanceof Response) return env;
-  const { token } = await ctx.params;
-  if (!safeEqual(token, env.WHATSAPP_WEBHOOK_PATH_TOKEN)) return notFound();
+  const source = resolveWebhookSource((await ctx.params).token, env);
+  if (!source) return notFound();
 
-  const challenge = verifyHandshake(new URL(request.url).searchParams, env.WHATSAPP_VERIFY_TOKEN);
+  const challenge = verifyHandshake(new URL(request.url).searchParams, source.verifyToken);
   if (!challenge) return new Response("Forbidden", { status: 403 });
   return new Response(challenge, { status: 200, headers: { "content-type": "text/plain" } });
 }
@@ -41,15 +43,20 @@ export async function GET(request: Request, ctx: RouteContext<"/api/webhooks/wha
 export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/whatsapp/[token]">) {
   const env = loadEnv();
   if (env instanceof Response) return env;
-  const { token } = await ctx.params;
-  if (!safeEqual(token, env.WHATSAPP_WEBHOOK_PATH_TOKEN)) return notFound();
+  const source = resolveWebhookSource((await ctx.params).token, env);
+  if (!source) return notFound();
+
+  // Tombol "Test Ping" di dashboard Dualhook: cukup dijawab OK.
+  if (source.sumber === "dualhook" && request.headers.get("x-dualhook-event") === "test_ping") {
+    return new Response("OK", { status: 200 });
+  }
 
   const rawBody = await request.text();
   const envelope = parseEnvelope(rawBody);
   if (!envelope) return new Response("Bad request", { status: 400 });
 
-  const signatureValid = env.WHATSAPP_APP_SECRET
-    ? verifySignature(rawBody, request.headers.get("x-hub-signature-256"), env.WHATSAPP_APP_SECRET)
+  const signatureValid = source.appSecret
+    ? verifySignature(rawBody, request.headers.get("x-hub-signature-256"), source.appSecret)
     : null;
   // Payload dengan signature salah tetap dicatat (signature_valid = false) untuk
   // debug, tetapi dijawab 401 dan tidak pernah diproses.
@@ -57,7 +64,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/wh
   const { data: event, error } = await admin
     .from("webhook_events")
     .insert({
-      sumber: "whatsapp",
+      sumber: source.sumber,
       jenis: firstField(envelope),
       payload_mentah: envelope,
       signature_valid: signatureValid,

@@ -34,7 +34,8 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - [x] 👤 Isi alamat dan email kontak di `lib/company.ts` (dipakai halaman legal)
 - [ ] 👤 Tech Provider tahap 0–3: dokumen PT, domain, Business Portfolio, app Meta, verifikasi bisnis, App Review
 - [x] 🤖 Halaman legal publik: `/kebijakan-privasi`, `/syarat-ketentuan`, `/hapus-data`
-- [ ] 👤 (Opsional) Dualhook trial untuk uji nomor internal sambil menunggu App Review
+- [x] 🤖 Webhook terpisah untuk Dualhook (token sendiri, tanpa verifikasi signature) + CS pemilik di form nomor (`docs/SETUP.md` §8)
+- [ ] 👤 Sobatimport: Dualhook trial, sambungkan nomor CS, daftarkan di `/admin`
 - [x] 🤖 Migrasi `webhook_events` (RLS: hanya server)
 - [x] 🤖 Migrasi: `wa_numbers` (+ `cs_pemilik`), `contacts`, `messages`, `stage_history` (trigger), fungsi SQL `ingest_message`, RLS CS hanya kontak miliknya, Realtime
 - [x] 🤖 Fixture payload: teks + gambar asli (nomor tes Meta), `smb_message_echoes`, `history`, referral CTWA, contoh dashboard

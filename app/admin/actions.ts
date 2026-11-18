@@ -69,6 +69,7 @@ const numberSchema = z.object({
   nomorTampil: z.string().trim().max(30).optional().transform((v) => v || null),
   phoneNumberId: z.string().trim().regex(/^\d{5,30}$/, "Phone Number ID hanya angka."),
   wabaId: z.string().trim().regex(/^\d{5,30}$/, "WABA ID hanya angka."),
+  csPemilik: z.union([z.literal(""), z.uuid()]).optional().transform((v) => v || null),
 });
 
 export async function addWaNumber(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -76,15 +77,25 @@ export async function addWaNumber(_prev: FormState, formData: FormData): Promise
 
   const parsed = numberSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
-  const { workspaceId, label, nomorTampil, phoneNumberId, wabaId } = parsed.data;
+  const { workspaceId, label, nomorTampil, phoneNumberId, wabaId, csPemilik } = parsed.data;
 
   const supabase = await createClient();
+  if (csPemilik) {
+    const { data: member } = await supabase
+      .from("memberships")
+      .select("user_id")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", csPemilik)
+      .maybeSingle();
+    if (!member) return { error: "CS pemilik bukan anggota workspace itu." };
+  }
   const { error } = await supabase.from("wa_numbers").insert({
     workspace_id: workspaceId,
     label,
     nomor_tampil: nomorTampil,
     phone_number_id: phoneNumberId,
     waba_id: wabaId,
+    cs_pemilik: csPemilik,
   });
   if (error) {
     return { error: error.code === "23505" ? "Phone Number ID ini sudah terdaftar." : "Gagal menambah nomor." };

@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { firstField, parseEnvelope, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
+import { firstField, parseEnvelope, resolveWebhookSource, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
 
 const VERIFY = "verify-token-1234567890";
 
@@ -76,5 +76,38 @@ describe("parseEnvelope", () => {
     JSON.stringify({ object: "whatsapp_business_account", entry: [{ id: "1", changes: [{ value: {} }] }] }),
   ])("menolak payload tidak valid: %s", (raw) => {
     expect(parseEnvelope(raw)).toBeNull();
+  });
+});
+
+describe("resolveWebhookSource", () => {
+  const env = {
+    WHATSAPP_WEBHOOK_PATH_TOKEN: "meta-path-token-0123456789abcdef",
+    WHATSAPP_VERIFY_TOKEN: "meta-verify-token-123",
+    WHATSAPP_APP_SECRET: "secret",
+    WHATSAPP_DUALHOOK_PATH_TOKEN: "dualhook-path-token-0123456789ab",
+    WHATSAPP_DUALHOOK_VERIFY_TOKEN: "dualhook-verify-token",
+  };
+
+  it("token app sendiri → signature diverifikasi dengan app secret", () => {
+    expect(resolveWebhookSource(env.WHATSAPP_WEBHOOK_PATH_TOKEN, env)).toEqual({
+      sumber: "meta",
+      verifyToken: "meta-verify-token-123",
+      appSecret: "secret",
+    });
+  });
+
+  it("token Dualhook → verify token sendiri, tanpa verifikasi signature", () => {
+    expect(resolveWebhookSource(env.WHATSAPP_DUALHOOK_PATH_TOKEN, env)).toEqual({
+      sumber: "dualhook",
+      verifyToken: "dualhook-verify-token",
+      appSecret: null,
+    });
+  });
+
+  it("token lain atau jalur Dualhook yang belum dikonfigurasi → null", () => {
+    expect(resolveWebhookSource("salah", env)).toBeNull();
+    const { WHATSAPP_DUALHOOK_VERIFY_TOKEN: _omit, ...partial } = env;
+    void _omit;
+    expect(resolveWebhookSource(env.WHATSAPP_DUALHOOK_PATH_TOKEN, partial)).toBeNull();
   });
 });

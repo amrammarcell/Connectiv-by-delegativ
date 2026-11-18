@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { AddNumberForm } from "./add-number-form";
+import type { Peran } from "@/lib/types";
+import { AddNumberForm, type WorkspaceMember } from "./add-number-form";
 import { AdAccountRow, AddAdAccountForm, type AdAccountItem } from "./ad-accounts";
 import { CreateWorkspaceForm } from "./create-workspace-form";
 
@@ -62,6 +63,17 @@ async function AdminContent() {
       }[]
     >();
 
+  const { data: memberRows } = await supabase
+    .from("memberships")
+    .select("workspace_id, peran, profiles(id, nama, email)")
+    .returns<{ workspace_id: string; peran: Peran; profiles: { id: string; nama: string | null; email: string } }[]>();
+  const members: WorkspaceMember[] = (memberRows ?? []).map((m) => ({
+    workspaceId: m.workspace_id,
+    userId: m.profiles.id,
+    nama: m.profiles.nama ?? m.profiles.email,
+    peran: m.peran,
+  }));
+
   const { data: adAccounts } = await supabase
     .from("ad_accounts")
     .select("id, meta_ad_account_id, nama, status_sync, terakhir_sync_pada, error_terakhir, workspaces(nama)")
@@ -88,7 +100,7 @@ async function AdminContent() {
           <p className="mt-1 text-sm text-muted-foreground">
             Pendaftaran manual untuk uji. Webhook yang tertunda karena nomor belum terdaftar diproses ulang otomatis.
           </p>
-          <AddNumberForm workspaces={(workspaces ?? []).map((w) => ({ id: w.id, nama: w.nama }))} />
+          <AddNumberForm workspaces={(workspaces ?? []).map((w) => ({ id: w.id, nama: w.nama }))} members={members} />
         </div>
         <div className="overflow-x-auto">
           <Table>

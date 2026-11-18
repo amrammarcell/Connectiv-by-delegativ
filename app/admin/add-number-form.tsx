@@ -1,23 +1,41 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import type { FormState } from "@/app/actions/auth";
 import { FormMessage } from "@/components/form-message";
 import { NativeSelect } from "@/components/native-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PERAN_LABEL, type Peran } from "@/lib/types";
 import { addWaNumber } from "./actions";
-import type { FormState } from "@/app/actions/auth";
 
-export function AddNumberForm({ workspaces }: { workspaces: { id: string; nama: string }[] }) {
+export type WorkspaceMember = { workspaceId: string; userId: string; nama: string; peran: Peran };
+
+export function AddNumberForm({
+  workspaces,
+  members,
+}: {
+  workspaces: { id: string; nama: string }[];
+  members: WorkspaceMember[];
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(addWaNumber, {});
+  const [workspaceId, setWorkspaceId] = useState(workspaces[0]?.id ?? "");
+  const options = members.filter((m) => m.workspaceId === workspaceId);
 
   return (
     <>
       <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="workspaceId">Workspace</Label>
-          <NativeSelect id="workspaceId" name="workspaceId" required className="h-10">
+          <NativeSelect
+            id="workspaceId"
+            name="workspaceId"
+            required
+            value={workspaceId}
+            onChange={(e) => setWorkspaceId(e.target.value)}
+            className="h-10"
+          >
             {workspaces.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.nama}
@@ -27,7 +45,18 @@ export function AddNumberForm({ workspaces }: { workspaces: { id: string; nama: 
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="label">Label</Label>
-          <Input id="label" name="label" required maxLength={60} placeholder="Sales 1 – Dewi" className="h-10" />
+          <Input id="label" name="label" required maxLength={60} placeholder="CS 1 – Dewi" className="h-10" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="csPemilik">CS pemilik (auto-assign)</Label>
+          <NativeSelect id="csPemilik" name="csPemilik" key={workspaceId} defaultValue="" className="h-10">
+            <option value="">Tidak ada</option>
+            {options.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.nama} · {PERAN_LABEL[m.peran]}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="nomorTampil">Nomor (tampilan)</Label>
