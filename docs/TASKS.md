@@ -31,22 +31,23 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 
 ## Sprint 2 — Webhook + adapter + pesan
 - [x] 👤 Pilih jalur: **Tech Provider Delegativ sendiri** (resmi, tanpa BSP). Lihat `docs/TECH-PROVIDER.md`, latar belakang di `docs/BSP.md`
-- [ ] 👤 Isi alamat dan email kontak di `lib/company.ts` (dipakai halaman legal)
+- [x] 👤 Isi alamat dan email kontak di `lib/company.ts` (dipakai halaman legal)
 - [ ] 👤 Tech Provider tahap 0–3: dokumen PT, domain, Business Portfolio, app Meta, verifikasi bisnis, App Review
 - [x] 🤖 Halaman legal publik: `/kebijakan-privasi`, `/syarat-ketentuan`, `/hapus-data`
 - [ ] 👤 (Opsional) Dualhook trial untuk uji nomor internal sambil menunggu App Review
 - [x] 🤖 Migrasi `webhook_events` (RLS: hanya server)
-- [ ] 🤖 Migrasi: `wa_numbers`, `contacts`, `messages`, `stage_history`
-- [ ] 🤖 Fixture payload: text, image, document, audio, referral CTWA, `smb_message_echoes`, `history`, status (utamakan payload asli dari uji Dualhook)
+- [x] 🤖 Migrasi: `wa_numbers` (+ `cs_pemilik`), `contacts`, `messages`, `stage_history` (trigger), fungsi SQL `ingest_message`, RLS CS hanya kontak miliknya, Realtime
+- [x] 🤖 Fixture payload: teks + gambar asli (nomor tes Meta), `smb_message_echoes`, `history`, referral CTWA, contoh dashboard
+- [ ] 🤖 Fixture asli untuk document, audio, `smb_message_echoes`, `history` begitu nomor Coexistence tersambung
 - [x] 🤖 Route GET/POST `/api/webhooks/whatsapp/[token]`: token rahasia di URL, verify token, signature opsional, simpan mentah
-- [ ] 🤖 Proses setelah simpan dengan `after()`
-- [ ] 🤖 Adapter Meta → `NormalizedEvent` (+ test per fixture)
-- [ ] 🤖 Processor: routing workspace, upsert kontak, insert pesan idempoten, kolom denormalisasi, atribusi first-touch (+ test)
-- [ ] 🤖 Unduh media ke Storage privat + signed URL
-- [ ] 🤖 Cron retry webhook gagal
-- [ ] 🤖 Admin: tambah nomor WA manual (untuk uji), status koneksi
+- [x] 🤖 Proses setelah simpan dengan `after()`; `npm run webhook:reprocess` untuk yang tertunda
+- [x] 🤖 Adapter Meta → `NormalizedMessage` (+ 7 test fixture)
+- [x] 🤖 Processor: routing workspace, upsert kontak, insert pesan idempoten, kolom denormalisasi, atribusi first-touch, auto-assign `cs_pemilik`, buka ulang Closing/Lost (+ 13 test integrasi)
+- [ ] 🤖 Unduh media ke Storage privat + signed URL (butuh token permanen: system user / business token)
+- [ ] 🤖 Cron retry webhook gagal (Vercel Hobby hanya cron harian; pertimbangkan Supabase pg_cron)
+- [x] 🤖 Admin: tambah nomor WA manual (untuk uji), status koneksi
 - [x] 👤 Buat app "Connectiv" di Meta for Developers, sambungkan nomor tes gratis ke webhook (chat asli masuk 18 Nov 2026)
-- [ ] 👤 Pasang `WHATSAPP_APP_SECRET` di Vercel supaya signature webhook diverifikasi
+- [x] 👤 Pasang `WHATSAPP_APP_SECRET` di Vercel supaya signature webhook diverifikasi
 
 ## Sprint 2b — Nomor WhatsApp per sales (setelah App Review lolos)
 - [ ] 🤖 Migrasi: `wa_numbers.cs_pemilik`, `tersambung_pada`, `sync_kontak_pada`, `sync_riwayat_pada`; token bisnis tersimpan terenkripsi
@@ -54,18 +55,19 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - [ ] 🤖 Tombol "Tambah nomor": Facebook JS SDK + Embedded Signup (Coexistence), tangkap `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING`
 - [ ] 🤖 Server: tukar `code` → business token, `POST /<WABA_ID>/subscribed_apps`, simpan nomor
 - [ ] 🤖 Sync kontak lalu riwayat (`/<PHONE_NUMBER_ID>/smb_app_data`) otomatis dalam 24 jam, dengan status di UI
-- [ ] 🤖 Processor: kontak baru otomatis di-assign ke `cs_pemilik` nomor penerima (+ test)
 - ✅ Owner menambah nomor sales sendiri dari dashboard, chat-nya masuk dan langsung di-assign ke sales tersebut
 - ✅ Chat di nomor internal muncul di database, tanpa duplikat
 
 ## Sprint 3 — Inbox mirroring + waktu tanggapan
-- [ ] 🤖 Daftar percakapan (urut pesan terbaru), pencarian nama/nomor
-- [ ] 🤖 Panel percakapan: gelembung masuk/keluar, teks, gambar, dokumen, voice note
-- [ ] 🤖 Realtime: pesan baru dan urutan daftar tanpa refresh
-- [ ] 🤖 F4a: status "Menunggu sejak / Dibalas X lalu", warna batas waktu, timer 30 detik
-- [ ] 🤖 Filter: nomor WA, CS, stage, iklan asal, rentang tanggal, "Belum dibalas"
-- [ ] 🤖 Pengaturan → batas waktu kuning/merah
-- ✅ Chat muncul di dashboard tanpa refresh, lengkap dengan status waktu tanggapan
+- [x] 🤖 Daftar percakapan (urut pesan terbaru), pencarian nama/nomor
+- [x] 🤖 Panel percakapan: gelembung masuk/keluar, teks, penanda lampiran (pratinjau gambar/voice note menunggu unduh media)
+- [x] 🤖 Realtime: pesan baru dan urutan daftar tanpa refresh
+- [x] 🤖 F4a: status "Menunggu sejak / Dibalas X lalu", warna batas waktu, timer 30 detik
+- [x] 🤖 Filter: Semua / Belum dibalas (urut paling lama) / Dari iklan, nomor WA
+- [ ] 🤖 Filter lanjutan: CS, stage, iklan tertentu, rentang tanggal
+- [ ] 🤖 Tampilan mobile: sidebar jadi menu ringkas supaya inbox langsung terlihat
+- [x] 🤖 Pengaturan → batas waktu kuning/merah
+- ✅ Chat muncul di dashboard tanpa refresh, lengkap dengan status waktu tanggapan — **selesai** (diuji dengan chat asli + simulasi realtime)
 
 ## Sprint 4 — Kontak, assign, pipeline
 - [ ] 👤 Konfirmasi: pipeline berbasis kontak + buka ulang saat repeat (ARCHITECTURE §4)

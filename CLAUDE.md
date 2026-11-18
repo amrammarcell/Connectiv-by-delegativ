@@ -26,9 +26,13 @@ npx supabase db push --remote   # terapkan migrasi ke project dev (tanpa Docker)
 npm run seed:dev    # workspace /w/demo + akun QA (kredensial di .qa-credentials.json)
 npm run admin:promote -- email   # jadikan akun Super Admin
 npm run webhook:tokens   # buat token webhook WhatsApp di .env.local (tidak dicetak)
+npm run webhook:latest   # lihat webhook terakhir (-- 3 --raw untuk payload lengkap)
+npm run webhook:reprocess   # proses ulang webhook tertunda (mis. setelah nomor didaftarkan)
 ```
 
-Webhook WhatsApp: `app/api/webhooks/whatsapp/[token]/route.ts`. Lewat Dualhook, signature Meta tidak bisa diverifikasi (secret milik Dualhook), jadi token rahasia di URL wajib. Payload mentah selalu disimpan ke `webhook_events` sebelum membalas 200. Lihat `docs/BSP.md`.
+Webhook WhatsApp: `app/api/webhooks/whatsapp/[token]/route.ts`. Lewat Dualhook, signature Meta tidak bisa diverifikasi (secret milik Dualhook), jadi token rahasia di URL wajib. Payload mentah selalu disimpan ke `webhook_events` sebelum membalas 200, lalu diproses dengan `after()`: `lib/whatsapp/adapter.ts` (format Meta → `NormalizedMessage`) → `lib/whatsapp/processor.ts` → fungsi SQL `ingest_message` (kontak, pesan, status menunggu, atribusi, dalam satu transaksi). Nomor yang belum terdaftar di `wa_numbers` membuat event tertunda. Lihat `docs/BSP.md` dan `docs/SETUP.md` §6.
+
+Realtime di klien wajib lewat `lib/supabase/realtime.ts` (`subscribeWithAuth`) supaya JWT user terpasang dan RLS berlaku.
 
 `npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi.
 

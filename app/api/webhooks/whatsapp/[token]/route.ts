@@ -1,10 +1,11 @@
+import { after } from "next/server";
 import { whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { processWebhookEvent } from "@/lib/whatsapp/processor";
 import { firstField, parseEnvelope, safeEqual, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
 
-// Penerima webhook WhatsApp. Tahap ini hanya MENYIMPAN payload mentah ke
-// webhook_events dan langsung membalas 200; pemrosesan menjadi kontak dan
-// pesan ditambahkan di Sprint 2 (adapter + processor).
+// Penerima webhook WhatsApp: simpan payload mentah ke webhook_events, balas
+// 200, lalu proses menjadi kontak dan pesan dengan after().
 //
 // Lewat Dualhook, Meta menandatangani payload dengan app secret Dualhook yang
 // tidak bisa kita ketahui. Maka keaslian dijaga oleh token rahasia di URL,
@@ -52,20 +53,35 @@ export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/wh
     : null;
   // Payload dengan signature salah tetap dicatat (signature_valid = false) untuk
   // debug, tetapi dijawab 401 dan tidak pernah diproses.
-  const { error } = await createAdminClient().from("webhook_events").insert({
-    sumber: "whatsapp",
-    jenis: firstField(envelope),
-    payload_mentah: envelope,
-    signature_valid: signatureValid,
-    diproses: signatureValid === false,
-    error: signatureValid === false ? "signature tidak valid" : null,
-  });
+  const admin = createAdminClient();
+  const { data: event, error } = await admin
+    .from("webhook_events")
+    .insert({
+      sumber: "whatsapp",
+      jenis: firstField(envelope),
+      payload_mentah: envelope,
+      signature_valid: signatureValid,
+      diproses: signatureValid === false,
+      error: signatureValid === false ? "signature tidak valid" : null,
+    })
+    .select("id")
+    .single();
   if (signatureValid === false) return new Response("Invalid signature", { status: 401 });
   // Gagal simpan: balas 500 supaya Meta mengirim ulang (retry beberapa hari).
-  if (error) {
-    console.error("webhook_events insert failed", error.message);
+  if (error || !event) {
+    console.error("webhook_events insert failed", error?.message);
     return new Response("Storage error", { status: 500 });
   }
+
+  // Proses menjadi kontak + pesan setelah membalas, supaya Meta tidak menunggu.
+  // Kegagalan tercatat di webhook_events dan bisa diulang (npm run webhook:reprocess).
+  after(async () => {
+    try {
+      await processWebhookEvent(admin, event.id);
+    } catch (err) {
+      console.error("webhook processing failed", event.id, err instanceof Error ? err.message : err);
+    }
+  });
 
   return new Response("OK", { status: 200 });
 }

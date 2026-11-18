@@ -79,3 +79,29 @@ export async function removeMember(slug: string, userId: string): Promise<{ erro
   refresh();
   return {};
 }
+
+const thresholdSchema = z
+  .object({
+    kuning: z.coerce.number().int().min(1, "Minimal 1 menit.").max(1440),
+    merah: z.coerce.number().int().min(2).max(2880),
+  })
+  .refine((v) => v.merah > v.kuning, { error: "Batas merah harus lebih besar dari batas kuning." });
+
+export async function updateThresholds(slug: string, _prev: { error?: string; success?: string }, formData: FormData) {
+  const access = await requireWorkspace(slug);
+  if (!access.canManage) return { error: "Hanya Owner yang bisa mengubah batas waktu." };
+
+  const parsed = thresholdSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workspaces")
+    .update({ batas_kuning_menit: parsed.data.kuning, batas_merah_menit: parsed.data.merah })
+    .eq("id", access.workspace.id)
+    .select("id");
+  if (error || !data?.length) return { error: "Gagal menyimpan batas waktu." };
+
+  refresh();
+  return { success: "Batas waktu tersimpan." };
+}

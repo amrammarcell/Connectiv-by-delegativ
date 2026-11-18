@@ -1,0 +1,30 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "1785116869270754",
+      "changes": [
+        {
+          "field": "smb_message_echoes",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15551661742",
+              "phone_number_id": "1502132426306454"
+            },
+            "message_echoes": [
+              {
+                "from": "15551661742",
+                "to": "6281200000001",
+                "id": "wamid.UJI-ECHO-1",
+                "timestamp": "1794979100",
+                "type": "text",
+                "text": { "body": "Halo kak, ada yang bisa dibantu?" }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

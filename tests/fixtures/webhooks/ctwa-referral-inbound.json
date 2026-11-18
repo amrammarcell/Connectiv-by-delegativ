@@ -1,0 +1,40 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "1785116869270754",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15551661742",
+              "phone_number_id": "1502132426306454"
+            },
+            "contacts": [{ "profile": { "name": "Calon Pembeli" }, "wa_id": "6281200000003" }],
+            "messages": [
+              {
+                "from": "6281200000003",
+                "id": "wamid.UJI-CTWA-1",
+                "timestamp": "1794979200",
+                "type": "text",
+                "text": { "body": "Halo, saya mau tanya promo bundling" },
+                "referral": {
+                  "source_url": "https://fb.me/uji-iklan",
+                  "source_id": "120200000000000001",
+                  "source_type": "ad",
+                  "headline": "Promo Bundling 3 Pcs",
+                  "body": "Hemat sampai 30%",
+                  "media_type": "image",
+                  "image_url": "https://example.com/iklan.jpg",
+                  "ctwa_clid": "ARAkUJI_CTWA_CLID"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -5,7 +5,10 @@ import { z } from "zod";
 import { ensureUser } from "@/lib/accounts";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SLUG_PATTERN } from "@/lib/text";
+import { processPendingEvents } from "@/lib/whatsapp/processor";
+import type { FormState } from "@/app/actions/auth";
 
 export type CreateWorkspaceState = {
   error?: string;
@@ -56,4 +59,39 @@ export async function createWorkspace(
 
   refresh();
   return { created: { nama, slug, ownerEmail, tempPassword: owner.tempPassword } };
+}
+
+const numberSchema = z.object({
+  workspaceId: z.uuid({ error: "Pilih workspace." }),
+  label: z.string().trim().min(1, "Label wajib diisi.").max(60),
+  nomorTampil: z.string().trim().max(30).optional().transform((v) => v || null),
+  phoneNumberId: z.string().trim().regex(/^\d{5,30}$/, "Phone Number ID hanya angka."),
+  wabaId: z.string().trim().regex(/^\d{5,30}$/, "WABA ID hanya angka."),
+});
+
+export async function addWaNumber(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireSuperAdmin();
+
+  const parsed = numberSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  const { workspaceId, label, nomorTampil, phoneNumberId, wabaId } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("wa_numbers").insert({
+    workspace_id: workspaceId,
+    label,
+    nomor_tampil: nomorTampil,
+    phone_number_id: phoneNumberId,
+    waba_id: wabaId,
+  });
+  if (error) {
+    return { error: error.code === "23505" ? "Phone Number ID ini sudah terdaftar." : "Gagal menambah nomor." };
+  }
+
+  // Webhook yang sempat tertunda karena nomor ini belum terdaftar.
+  const result = await processPendingEvents(createAdminClient());
+  refresh();
+  return {
+    success: `Nomor ${label} ditambahkan.${result.inserted ? ` ${result.inserted} pesan tertunda berhasil diproses.` : ""}`,
+  };
 }

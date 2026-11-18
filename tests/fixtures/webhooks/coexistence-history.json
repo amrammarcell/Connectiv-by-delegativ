@@ -1,0 +1,53 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "1785116869270754",
+      "changes": [
+        {
+          "field": "history",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15551661742",
+              "phone_number_id": "1502132426306454"
+            },
+            "history": [
+              {
+                "metadata": { "phase": 1, "chunk_order": 1, "progress": 100 },
+                "threads": [
+                  {
+                    "id": "6281200000002",
+                    "messages": [
+                      {
+                        "from": "6281200000002",
+                        "id": "wamid.UJI-HISTORY-IN",
+                        "timestamp": "1790000000",
+                        "type": "text",
+                        "text": { "body": "Kak, stok masih ada?" },
+                        "history_context": { "status": "READ" }
+                      },
+                      {
+                        "from": "15551661742",
+                        "id": "wamid.UJI-HISTORY-OUT",
+                        "timestamp": "1790000300",
+                        "type": "text",
+                        "text": { "body": "Masih kak" },
+                        "history_context": { "status": "READ" }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "errors": [
+                  { "code": 2593109, "title": "History sync is turned off by the business from the WhatsApp Business App" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

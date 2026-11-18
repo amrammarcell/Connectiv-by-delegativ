@@ -5,13 +5,14 @@ import { requireWorkspace } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Peran } from "@/lib/types";
 import { MembersManager, type Member } from "./members-manager";
+import { ThresholdsForm } from "./thresholds-form";
 
 export const metadata: Metadata = { title: "Pengaturan" };
 
 export default function Page({ params }: PageProps<"/w/[slug]/pengaturan">) {
   return (
     <>
-      <PageHeader title="Pengaturan" description="User dan peran di workspace ini" />
+      <PageHeader title="Pengaturan" description="Waktu tanggapan, user, dan peran di workspace ini" />
       <Suspense fallback={<p className="m-7 text-sm text-muted-foreground">Memuat…</p>}>
         <MembersSection params={params} />
       </Suspense>
@@ -46,5 +47,16 @@ async function MembersSection({ params }: { params: Promise<{ slug: string }> })
     nama: m.profiles.nama,
   }));
 
-  return <MembersManager slug={slug} members={members} currentUserId={access.user.id} />;
+  return (
+    <div className="flex flex-col">
+      <div className="mx-7 mt-7 max-w-4xl">
+        <ThresholdsForm
+          slug={slug}
+          kuning={access.workspace.batas_kuning_menit}
+          merah={access.workspace.batas_merah_menit}
+        />
+      </div>
+      <MembersManager slug={slug} members={members} currentUserId={access.user.id} />
+    </div>
+  );
 }

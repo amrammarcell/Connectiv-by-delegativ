@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/coming-soon";
-import { PageHeader } from "@/components/page-header";
+import { MessagesSquare } from "lucide-react";
 
 export const metadata: Metadata = { title: "Inbox" };
 
-export default function Page() {
+export default function InboxPage() {
   return (
-    <>
-      <PageHeader title="Inbox" description="Mirroring chat WhatsApp CS · hanya baca" />
-      <ComingSoon sprint={3} items={["Daftar percakapan realtime", "Status waktu tanggapan per chat", "Filter nomor WA, CS, stage, dan iklan asal"]} />
-    </>
+    <div className="hidden flex-1 flex-col items-center justify-center gap-3 bg-background p-8 text-center md:flex">
+      <MessagesSquare aria-hidden className="size-10 text-muted-foreground" />
+      <p className="text-sm font-semibold">Pilih percakapan</p>
+      <p className="max-w-xs text-sm text-muted-foreground">
+        Chat dari WhatsApp CS muncul otomatis di daftar sebelah kiri, lengkap dengan status waktu tanggapan.
+      </p>
+    </div>
   );
 }
