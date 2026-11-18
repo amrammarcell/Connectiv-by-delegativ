@@ -5,6 +5,7 @@ import { ConversationView } from "@/components/inbox/conversation-view";
 import { CONTACT_COLUMNS, MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "@/components/inbox/types";
 import { getInboxLookups } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
+import { getMembers, getStages } from "@/lib/workspace-data";
 
 export const metadata: Metadata = { title: "Percakapan" };
 
@@ -19,7 +20,11 @@ export default function ConversationPage({ params }: PageProps<"/w/[slug]/inbox/
 async function Conversation({ params }: { params: Promise<{ slug: string; contactId: string }> }) {
   const { slug, contactId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(contactId)) notFound();
-  const { access, stages, numbers, people, thresholds } = await getInboxLookups(slug);
+  const [{ access, numbers, thresholds }, stages, members] = await Promise.all([
+    getInboxLookups(slug),
+    getStages(slug),
+    getMembers(slug),
+  ]);
   const supabase = await createClient();
 
   // RLS: kontak milik CS lain atau workspace lain tidak terbaca → 404.
@@ -46,8 +51,9 @@ async function Conversation({ params }: { params: Promise<{ slug: string; contac
       slug={slug}
       initialContact={contact}
       initialMessages={(latest ?? []).reverse()}
-      stageName={contact.stage_id ? (stages[contact.stage_id] ?? null) : null}
-      assigneeName={contact.assigned_to ? (people[contact.assigned_to] ?? null) : null}
+      stages={stages}
+      members={members}
+      canAssign={access.canManage || access.peran === "supervisor"}
       numberLabel={contact.wa_number_id_terakhir ? (numbers[contact.wa_number_id_terakhir] ?? null) : null}
       thresholds={thresholds}
     />

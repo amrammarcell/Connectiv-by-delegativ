@@ -70,12 +70,14 @@ Label: 👤 dikerjakan Anda (akun, akses, keputusan) · 🤖 dikerjakan Claude �
 - ✅ Chat muncul di dashboard tanpa refresh, lengkap dengan status waktu tanggapan — **selesai** (diuji dengan chat asli + simulasi realtime)
 
 ## Sprint 4 — Kontak, assign, pipeline
-- [ ] 👤 Konfirmasi: pipeline berbasis kontak + buka ulang saat repeat (ARCHITECTURE §4)
-- [ ] 🤖 Halaman kontak (tabel + detail), catatan internal
-- [ ] 🤖 Assign kontak ke CS (Supervisor/Owner), RLS CS hanya kontak sendiri
-- [ ] 🤖 Kanban drag & drop, trigger `stage_history`, realtime antar user
-- [ ] 🤖 Pengaturan → stage: ubah nama dan urutan
-- ✅ Kontak bisa dipindah antar stage, riwayat tercatat
+- [x] 👤 Konfirmasi: pipeline berbasis kontak + buka ulang saat repeat (ARCHITECTURE §4) — dipakai sebagai default
+- [x] 🤖 Halaman kontak (tabel + pencarian + filter sumber) dan detail (status, atribusi, riwayat stage)
+- [x] 🤖 Catatan internal (`contact_notes`): tambah oleh yang bisa melihat kontak, hapus oleh penulis atau Owner
+- [x] 🤖 Assign kontak ke CS (Owner/Supervisor) di detail kontak dan header percakapan Inbox
+- [x] 🤖 Kanban drag & drop (`@dnd-kit/core`) + menu Pindah (aksesibel), riwayat stage otomatis, realtime antar user
+- [x] 🤖 Pengaturan → stage: ubah nama dan urutan (fungsi SQL `reorder_stages`, Closing/Lost selalu di akhir)
+- [x] 🤖 Test: 9 test RLS catatan, urutan stage, assign
+- ✅ Kontak bisa dipindah antar stage, riwayat tercatat — **selesai** (diuji drag & drop di browser)
 
 ## Sprint 5 — Closing/Lost + atribusi
 - [ ] 🤖 Migrasi `deals`, dialog Closing (nilai Rupiah wajib) & Lost (alasan tetap + catatan untuk "Lainnya")

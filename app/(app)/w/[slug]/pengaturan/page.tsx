@@ -5,6 +5,8 @@ import { requireWorkspace } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Peran } from "@/lib/types";
 import { MembersManager, type Member } from "./members-manager";
+import { getStages } from "@/lib/workspace-data";
+import { StagesEditor } from "./stages-editor";
 import { ThresholdsForm } from "./thresholds-form";
 
 export const metadata: Metadata = { title: "Pengaturan" };
@@ -12,7 +14,7 @@ export const metadata: Metadata = { title: "Pengaturan" };
 export default function Page({ params }: PageProps<"/w/[slug]/pengaturan">) {
   return (
     <>
-      <PageHeader title="Pengaturan" description="Waktu tanggapan, user, dan peran di workspace ini" />
+      <PageHeader title="Pengaturan" description="Waktu tanggapan, stage pipeline, user, dan peran" />
       <Suspense fallback={<p className="m-7 text-sm text-muted-foreground">Memuat…</p>}>
         <MembersSection params={params} />
       </Suspense>
@@ -40,6 +42,7 @@ async function MembersSection({ params }: { params: Promise<{ slug: string }> })
     .order("dibuat_pada")
     .returns<{ user_id: string; peran: Peran; profiles: { email: string; nama: string | null } }[]>();
 
+  const stages = await getStages(slug);
   const members: Member[] = (data ?? []).map((m) => ({
     userId: m.user_id,
     peran: m.peran,
@@ -49,12 +52,13 @@ async function MembersSection({ params }: { params: Promise<{ slug: string }> })
 
   return (
     <div className="flex flex-col">
-      <div className="mx-7 mt-7 max-w-4xl">
+      <div className="mx-7 mt-7 flex max-w-4xl flex-col gap-6">
         <ThresholdsForm
           slug={slug}
           kuning={access.workspace.batas_kuning_menit}
           merah={access.workspace.batas_merah_menit}
         />
+        <StagesEditor slug={slug} stages={stages} />
       </div>
       <MembersManager slug={slug} members={members} currentUserId={access.user.id} />
     </div>

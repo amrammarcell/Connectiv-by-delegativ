@@ -8,6 +8,8 @@ import { formatClock, formatDayLabel, formatPhone, initials, isSameDay } from "@
 import { responseStatus, type Thresholds } from "@/lib/response-time";
 import { subscribeWithAuth } from "@/lib/supabase/realtime";
 import { cn } from "@/lib/utils";
+import { AssignSelect, StageSelect } from "@/components/contacts/contact-controls";
+import type { Member, Stage } from "@/lib/workspace-data";
 import { ResponseBadge } from "./response-badge";
 import { MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "./types";
 
@@ -31,16 +33,18 @@ export function ConversationView({
   slug,
   initialContact,
   initialMessages,
-  stageName,
-  assigneeName,
+  stages,
+  members,
+  canAssign,
   numberLabel,
   thresholds,
 }: {
   slug: string;
   initialContact: InboxContact;
   initialMessages: InboxMessage[];
-  stageName: string | null;
-  assigneeName: string | null;
+  stages: Stage[];
+  members: Member[];
+  canAssign: boolean;
   numberLabel: string | null;
   thresholds: Thresholds;
 }) {
@@ -103,17 +107,26 @@ export function ConversationView({
             <h2 className="truncate text-[17px] font-bold">{name}</h2>
             <span className="truncate text-[13px] text-muted-foreground">
               {formatPhone(contact.nomor_hp)}
-              {assigneeName ? ` · di-assign ke ${assigneeName}` : " · belum di-assign"}
+              {numberLabel ? ` · via ${numberLabel}` : ""}
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {stageName && (
-            <span className="rounded-lg bg-accent px-2.5 py-1.5 text-[13px] font-semibold text-accent-foreground">
-              {stageName}
-            </span>
-          )}
-          {numberLabel && <span className="text-xs text-muted-foreground">via {numberLabel}</span>}
+        <div className="flex flex-wrap items-start gap-2">
+          <StageSelect slug={slug} contactId={contact.id} value={contact.stage_id} stages={stages} />
+          <AssignSelect
+            slug={slug}
+            contactId={contact.id}
+            value={contact.assigned_to}
+            members={members}
+            canAssign={canAssign}
+            className="self-center"
+          />
+          <Link
+            href={`/w/${slug}/kontak/${contact.id}`}
+            className="inline-flex h-9 items-center rounded-lg border px-3 text-[13px] font-semibold text-secondary-foreground hover:bg-muted"
+          >
+            Detail & catatan
+          </Link>
         </div>
       </div>
 

@@ -53,3 +53,13 @@ describe("formatPhone", () => {
     expect(formatPhone("15551661742")).toBe("+15551661742");
   });
 });
+
+describe("formatDateTime", () => {
+  it("hari ini hanya jam, hari lain dengan tanggal", async () => {
+    const { formatDateTime } = await import("@/lib/format");
+    const ref = new Date("2026-11-18T07:00:00Z");
+    expect(formatDateTime("2026-11-18T06:30:00Z", ref)).toBe("13.30");
+    expect(formatDateTime("2026-11-17T06:30:00Z", ref)).toBe("Kemarin 13.30");
+    expect(formatDateTime("2026-11-12T06:30:00Z", ref)).toBe("12 Nov 13.30");
+  });
+});

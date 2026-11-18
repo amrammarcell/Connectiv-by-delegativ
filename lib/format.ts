@@ -19,6 +19,13 @@ export function formatListTime(value: string | Date, now: Date = new Date()): st
   return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", timeZone: TZ });
 }
 
+// Riwayat dan catatan: "13.30", "Kemarin 13.30", atau "12 Nov 13.30".
+export function formatDateTime(value: string | Date, now: Date = new Date()): string {
+  const date = new Date(value);
+  const day = formatListTime(date, now);
+  return dayKey(date) === dayKey(now) ? day : `${day} ${formatClock(date)}`;
+}
+
 // Pemisah hari di percakapan.
 export function formatDayLabel(value: string | Date, now: Date = new Date()): string {
   const date = new Date(value);
