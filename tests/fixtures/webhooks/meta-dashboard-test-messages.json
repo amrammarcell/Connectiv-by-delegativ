@@ -1,0 +1,42 @@
+{
+  "entry": [
+    {
+      "id": "0",
+      "time": 1794975208,
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "contacts": [
+              {
+                "wa_id": "16315551181",
+                "profile": {
+                  "name": "test user name"
+                },
+                "user_id": "US.13491208655302741918"
+              }
+            ],
+            "messages": [
+              {
+                "id": "ABGGFlA5Fpa",
+                "from": "16315551181",
+                "text": {
+                  "body": "this is a text message"
+                },
+                "type": "text",
+                "timestamp": "1504902988",
+                "from_user_id": "US.13491208655302741918"
+              }
+            ],
+            "metadata": {
+              "phone_number_id": "123456123",
+              "display_phone_number": "16505551111"
+            },
+            "messaging_product": "whatsapp"
+          }
+        }
+      ]
+    }
+  ],
+  "object": "whatsapp_business_account"
+}

@@ -1,0 +1,18 @@
+{
+  "entry": [
+    {
+      "id": "0",
+      "time": 1794975183,
+      "changes": [
+        {
+          "field": "account_update",
+          "value": {
+            "event": "VERIFIED_ACCOUNT",
+            "phone_number": "16505551111"
+          }
+        }
+      ]
+    }
+  ],
+  "object": "whatsapp_business_account"
+}

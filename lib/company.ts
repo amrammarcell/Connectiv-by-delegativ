@@ -1,10 +1,10 @@
-// Identitas perusahaan untuk halaman legal. Isi nilai bertanda [..] sebelum
-// mendaftarkan URL halaman legal di Meta App Dashboard.
+// Identitas perusahaan untuk halaman legal. Alamat diperbarui setelah akta
+// perubahan alamat selesai.
 export const COMPANY = {
   legalName: "PT Trinitas Delegasi Kreatif",
   brand: "Delegativ",
   product: "Connectiv",
-  address: "[ALAMAT KANTOR SESUAI AKTA]",
-  email: "[EMAIL KONTAK, mis. privasi@delegativ.com]",
-  lastUpdated: "10 November 2026",
+  address: "Legok, Kabupaten Tangerang, Banten 15820",
+  email: "team.delegativ@gmail.com",
+  lastUpdated: "18 November 2026",
 } as const;

@@ -50,14 +50,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/wh
   const signatureValid = env.WHATSAPP_APP_SECRET
     ? verifySignature(rawBody, request.headers.get("x-hub-signature-256"), env.WHATSAPP_APP_SECRET)
     : null;
-  if (signatureValid === false) return new Response("Invalid signature", { status: 401 });
-
+  // Payload dengan signature salah tetap dicatat (signature_valid = false) untuk
+  // debug, tetapi dijawab 401 dan tidak pernah diproses.
   const { error } = await createAdminClient().from("webhook_events").insert({
     sumber: "whatsapp",
     jenis: firstField(envelope),
     payload_mentah: envelope,
     signature_valid: signatureValid,
+    diproses: signatureValid === false,
+    error: signatureValid === false ? "signature tidak valid" : null,
   });
+  if (signatureValid === false) return new Response("Invalid signature", { status: 401 });
   // Gagal simpan: balas 500 supaya Meta mengirim ulang (retry beberapa hari).
   if (error) {
     console.error("webhook_events insert failed", error.message);

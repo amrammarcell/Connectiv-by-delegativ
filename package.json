@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "admin:promote": "node --env-file=.env.local scripts/promote-super-admin.mts",
     "seed:dev": "node --env-file=.env.local scripts/seed-dev.mts",
-    "webhook:tokens": "node scripts/webhook-tokens.mts"
+    "webhook:tokens": "node scripts/webhook-tokens.mts",
+    "webhook:latest": "node --env-file=.env.local scripts/webhook-latest.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
