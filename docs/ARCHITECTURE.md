@@ -198,23 +198,24 @@ sequenceDiagram
   R->>R: verifikasi signature (HMAC-SHA256)
   R->>DB: insert webhook_events (mentah)
   R-->>BSP: 200 OK (< 1 detik)
-  R->>P: after(): proses event
-  P->>P: adapter → NormalizedEvent[]
-  loop setiap pesan
-    P->>DB: cari wa_number via phone_number_id → workspace
-    P->>DB: upsert contact (workspace, nomor_hp)
-    P->>DB: insert message ON CONFLICT (wa_message_id) DO NOTHING
-    P->>DB: update kolom denormalisasi contact
+  R->>P: after(): proses event (maxDuration 300 dtk)
+  P->>P: adapter → pesan, edit/revoke, account_update
+  loop setiap 200 pesan (urut waktu)
+    P->>DB: rpc ingest_messages (satu transaksi)
+    Note over DB: per pesan: ingest_message → wa_number, upsert contact,<br/>insert message ON CONFLICT DO NOTHING, kolom denormalisasi;<br/>lalu edit/revoke atas pesan asli
     opt ada media
       P->>S: unduh dari Graph API, simpan ke media/
     end
   end
+  P->>DB: account_update → wa_numbers.status
   P->>DB: tandai webhook_events.diproses
 ```
 
 - **GET** (verifikasi pendaftaran): cocokkan `hub.verify_token`, balas `hub.challenge`.
 - **Signature tidak valid**: tetap simpan dengan `signature_valid = false`, balas 401, tidak diproses.
-- **Retry**: cron `process-webhooks` mengambil event `diproses = false` dengan `percobaan < 5`, backoff berdasarkan `diterima_pada`.
+- **Retry**: gangguan jaringan sesaat ("fetch failed") diulang 3× per batch. Event `diproses = false` diproses ulang oleh cron harian, tombol "Proses ulang" di `/admin` (Super Admin), atau `npm run webhook:reprocess`, dari yang terlama dengan batas waktu.
+- **Pemantauan**: `/admin` menampilkan jumlah webhook tertunda/gagal per sumber dan error terakhir (`webhook_event_stats`), status nomor (terputus dari `account_update`, tanpa pesan > 24 jam) dan peringatan Coexistence (tidak ada balasan CS dari aplikasi ≥ 12 hari; batas 14 hari).
+- **Retensi**: cron harian menghapus `webhook_events` yang sudah diproses dan `sync_runs` lebih tua dari 90 hari. Event yang belum diproses tidak pernah dihapus otomatis.
 - **Idempoten**: dijamin oleh unique `wa_message_id`. Event yang sama dua kali tidak menggandakan pesan maupun memajukan status.
 
 ### 6.1 `NormalizedEvent`
@@ -242,6 +243,9 @@ type NormalizedEvent =
 | Kontak di stage Closing/Lost menerima pesan masuk baru (bukan history) | buka ulang ke "Baru" (lihat keputusan §4) |
 | `wa_numbers.terakhir_terima_pesan` | diperbarui setiap event, dasar status koneksi |
 | Kontak baru dan nomor penerima punya `cs_pemilik` | `contacts.assigned_to = cs_pemilik` |
+| Pesan `edit` | isi pesan asli diganti, `diedit_pada` diisi (edit yang lebih lama dari edit terakhir diabaikan; pesan yang sudah ditarik tidak bisa diedit) |
+| Pesan `revoke` | `dihapus_pada` diisi, isi tetap disimpan; Inbox menampilkan "Pesan dihapus" (juga cuplikan jika pesan terakhir) |
+| `account_update` `PARTNER_REMOVED` / `ACCOUNT_DELETED` / `ACCOUNT_OFFBOARDED` | semua nomor di WABA itu (atau nomor di `phone_number`) `status = terputus`, `status_alasan` = event; pesan baru non-riwayat menyambungkan lagi |
 
 ---
 

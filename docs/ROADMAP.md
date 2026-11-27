@@ -27,14 +27,14 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 ## 1. Keandalan data WhatsApp
 **Fokus:** tidak ada chat yang hilang atau tertunda.
 
-- [ ] 🤖 Ingest berkelompok: satu panggilan SQL untuk banyak pesan (riwayat chat bisa ratusan pesan per webhook); hilangkan penyebab "fetch failed" dan proses ulang yang lambat
-- [ ] 🤖 Batas waktu proses webhook (`maxDuration`) cukup untuk paket riwayat besar; pecah pemrosesan jika perlu
-- [ ] 🤖 Cek dan tuntaskan webhook Sobatimport yang masih tertunda
-- [ ] 🤖 Halaman pemantauan di `/admin`: jumlah webhook tertunda/gagal per sumber, error terakhir, tombol "Proses ulang"
-- [ ] 🤖 Status nomor: tidak ada pesan > 24 jam, event `account_update` (terputus / `PARTNER_REMOVED`)
-- [ ] 🤖 Peringatan aplikasi WhatsApp Business di HP CS mendekati 14 hari tidak dibuka
-- [ ] 🤖 Tangani pesan `edit` dan `revoke` (perbarui / tandai dihapus)
-- [ ] 🤖 Hapus otomatis `webhook_events` > 90 hari (lewat cron harian)
+- [x] 🤖 Ingest berkelompok: satu panggilan SQL untuk banyak pesan (riwayat chat bisa ratusan pesan per webhook); hilangkan penyebab "fetch failed" dan proses ulang yang lambat
+- [x] 🤖 Batas waktu proses webhook (`maxDuration`) cukup untuk paket riwayat besar; pecah pemrosesan jika perlu
+- [x] 🤖 Cek dan tuntaskan webhook Sobatimport yang masih tertunda
+- [x] 🤖 Halaman pemantauan di `/admin`: jumlah webhook tertunda/gagal per sumber, error terakhir, tombol "Proses ulang"
+- [x] 🤖 Status nomor: tidak ada pesan > 24 jam, event `account_update` (terputus / `PARTNER_REMOVED`)
+- [x] 🤖 Peringatan aplikasi WhatsApp Business di HP CS mendekati 14 hari tidak dibuka
+- [x] 🤖 Tangani pesan `edit` dan `revoke` (perbarui / tandai dihapus); edit/revoke lama: `npm run webhook:backfill-edits -- --apply` (👤 setujui dulu)
+- [x] 🤖 Hapus otomatis `webhook_events` > 90 hari (lewat cron harian), juga `sync_runs`
 - ✅ Tidak ada webhook tertunda tanpa alasan; Super Admin bisa melihat dan memulihkan masalah dari `/admin`
 
 ## 2. Media chat

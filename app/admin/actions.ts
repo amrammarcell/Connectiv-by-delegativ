@@ -106,7 +106,7 @@ export async function addWaNumber(_prev: FormState, formData: FormData): Promise
   }
 
   // Webhook yang sempat tertunda karena nomor ini belum terdaftar.
-  const result = await processPendingEvents(admin);
+  const result = await processPendingEvents(admin, { deadline: Date.now() + 60_000 });
   refresh();
   return {
     success: `Nomor ${label} ditambahkan.${result.inserted ? ` ${result.inserted} pesan tertunda berhasil diproses.` : ""}`,
@@ -163,5 +163,28 @@ export async function syncAdAccountNow(adAccountId: string): Promise<FormState> 
   } catch (err) {
     refresh();
     return { error: err instanceof Error ? err.message : "Sync gagal." };
+  }
+}
+
+// Tombol "Proses ulang" di pemantauan webhook /admin. Dibatasi waktu supaya
+// tidak melewati maxDuration halaman; sisa event bisa diproses dengan klik lagi.
+export async function reprocessWebhooks(): Promise<FormState> {
+  await requireSuperAdmin();
+  try {
+    const r = await processPendingEvents(createAdminClient(), { deadline: Date.now() + 240_000 });
+    refresh();
+    if (!r.events) return { success: "Tidak ada webhook tertunda." };
+    const parts = [
+      `${r.events} webhook diperiksa: ${r.processed} selesai`,
+      r.failed ? `${r.failed} gagal` : null,
+      `${r.inserted} pesan baru`,
+      r.edited || r.revoked ? `${r.edited} diedit, ${r.revoked} ditarik` : null,
+      r.unknownNumbers.length ? `nomor belum terdaftar: ${r.unknownNumbers.join(", ")}` : null,
+      r.timedOut ? "sebagian masih tersisa, klik lagi" : null,
+    ];
+    return { success: parts.filter(Boolean).join(" · ") + "." };
+  } catch (err) {
+    refresh();
+    return { error: err instanceof Error ? err.message : "Proses ulang gagal." };
   }
 }

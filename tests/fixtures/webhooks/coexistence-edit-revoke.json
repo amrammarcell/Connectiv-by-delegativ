@@ -1,0 +1,57 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "100000000000001",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "6281100000000", "phone_number_id": "200000000000001" },
+            "contacts": [{ "profile": { "name": "Pelanggan Uji" }, "wa_id": "6281200000001" }],
+            "messages": [
+              {
+                "id": "wamid.UJI-EDIT-1",
+                "from": "6281200000001",
+                "timestamp": "1794980000",
+                "type": "edit",
+                "edit": {
+                  "original_message_id": "wamid.UJI-ASLI-1",
+                  "message": { "type": "text", "text": { "body": "Kak, ukuran XL ready?" } }
+                }
+              },
+              {
+                "id": "wamid.UJI-REVOKE-1",
+                "from": "6281200000001",
+                "timestamp": "1794980060",
+                "type": "revoke",
+                "revoke": { "original_message_id": "wamid.UJI-ASLI-2" }
+              }
+            ]
+          }
+        },
+        {
+          "field": "smb_message_echoes",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "6281100000000", "phone_number_id": "200000000000001" },
+            "message_echoes": [
+              {
+                "id": "wamid.UJI-EDIT-2",
+                "from": "6281100000000",
+                "to": "6281200000001",
+                "timestamp": "1794980120",
+                "type": "edit",
+                "edit": {
+                  "original_message_id": "wamid.UJI-ASLI-3",
+                  "message": { "type": "text", "text": { "body": "Ready kak, XL tinggal 2" } }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

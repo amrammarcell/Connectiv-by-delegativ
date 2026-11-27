@@ -13,6 +13,11 @@ import { firstField, parseEnvelope, resolveWebhookSource, verifyHandshake, verif
 //   kita ketahui, jadi keaslian dijaga token URL, bentuk payload, dan nomor
 //   yang harus terdaftar di wa_numbers sebelum pesan diproses.
 
+// after() berjalan dalam batas waktu fungsi ini. Riwayat chat bisa ratusan
+// pesan per webhook (diproses per 200 pesan lewat ingest_messages); 300 detik
+// adalah batas maksimum Vercel Hobby dengan Fluid Compute.
+export const maxDuration = 300;
+
 function notFound() {
   return new Response("Not found", { status: 404 });
 }

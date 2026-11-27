@@ -22,7 +22,7 @@ export type InboxContact = {
 };
 
 export const MESSAGE_COLUMNS =
-  "id, contact_id, wa_message_id, arah, tipe, isi, media_mime, nama_file, dari_history, dikirim_pada" as const;
+  "id, contact_id, wa_message_id, arah, tipe, isi, media_mime, nama_file, dari_history, dikirim_pada, diedit_pada, dihapus_pada" as const;
 
 export type InboxMessage = {
   id: string;
@@ -35,6 +35,9 @@ export type InboxMessage = {
   nama_file: string | null;
   dari_history: boolean;
   dikirim_pada: string;
+  // Diedit / ditarik ("hapus untuk semua") oleh pengirim.
+  diedit_pada: string | null;
+  dihapus_pada: string | null;
 };
 
 export type Lookup = Record<string, string>;
