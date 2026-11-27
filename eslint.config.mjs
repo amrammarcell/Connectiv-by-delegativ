@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Worktree sesi Claude (berisi salinan repo dan .next sendiri).
+    ".claude/**",
   ]),
 ]);
 

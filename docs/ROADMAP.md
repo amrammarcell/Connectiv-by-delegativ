@@ -127,9 +127,11 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 **Fokus:** halaman cepat dibuka dan tetap cepat saat data membesar.
 
 **A. Lokasi server**
-- [ ] 🤖 Fungsi Vercel di region yang sama dengan database (dev: Seoul `icn1`; `vercel.json` belum mengatur region, default Washington)
+- [x] 🤖 Fungsi Vercel di region yang sama dengan database (dev: Seoul `icn1`; sebelumnya `vercel.json` tidak mengatur region, default Washington `iad1`)
 - [ ] 🤖 Ukur waktu buka halaman sebelum dan sesudah (Vercel Speed Insights)
 - [ ] 👤 Produksi: Supabase dan Vercel sama-sama Singapore (`ap-southeast-1` + `sin1`)
+
+*Catatan 9A (27 Nov 2026):* `/api/health` sekarang melaporkan `region` (dari `VERCEL_REGION`) dan `db_latency_ms` (`auth_health`: fetch ke `/auth/v1/health`, `query`: satu query ringan ke `workspaces`). **Sebelum** (fungsi di `iad1`, database Seoul): waktu respons total `/api/health` produksi dari sisi klien, 10 kali `curl`, median **≈1,09 detik** (min 0,59, maks 1,77). **Sesudah:** diukur ulang setelah deploy ke `main` dengan cara yang sama; cek juga `region` terbaca `icn1` dan cron harian tetap terdaftar di Vercel.
 
 **B. Kapasitas database**
 - [ ] 👤 Supabase Pro untuk produksi (compute khusus, tanpa pause, backup)

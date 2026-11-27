@@ -289,6 +289,8 @@ Kohort: chat dan closing dihitung berdasarkan **tanggal kontak dibuat**, supaya 
 
 Migrasi dijalankan dengan `supabase db push` ke project tujuan. Test RLS berjalan terhadap project dev.
 
+Fungsi Vercel dipin ke region yang sama dengan database lewat `regions` di `vercel.json` (sekarang `icn1` Seoul, sama dengan Supabase dev `ap-northeast-2`; untuk produksi Singapore ganti ke `sin1`). `/api/health` melaporkan `region` dan `db_latency_ms` untuk memeriksanya.
+
 ---
 
 ## 11. Observabilitas
