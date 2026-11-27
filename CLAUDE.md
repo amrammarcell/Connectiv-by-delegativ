@@ -38,7 +38,7 @@ Data iklan: `lib/meta-ads/sync.ts` (Marketing API, 3 hari terakhir, upsert `ads`
 
 Realtime di klien wajib lewat `lib/supabase/realtime.ts` (`subscribeWithAuth`) supaya JWT user terpasang dan RLS berlaku.
 
-`npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi.
+`npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi. Test integrasi (memakai DB dev) berjalan berurutan di project Vitest `integration`; file integrasi baru wajib ditambahkan ke `INTEGRATION_TESTS` di `vitest.config.mts`.
 
 ## Auth dan akses
 
