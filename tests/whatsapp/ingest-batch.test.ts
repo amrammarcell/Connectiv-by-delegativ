@@ -220,7 +220,8 @@ describe.skipIf(!supabaseEnabled)("ingest_messages (berkelompok)", { timeout: 12
       .single();
     expect(contact!.pesan_terakhir_cuplikan).toBe("Pesan dihapus");
 
-    // Mengulang batch yang sama tidak menghitung ulang.
+    // Mengulang edit/revoke yang sama tidak menghitung ulang.
+    expect(await ingestAll(ctx.admin, [], [upd("edit", "e1", 10, "sudah diedit")])).toMatchObject({ edited: 0 });
     expect(await ingestBatch(ctx.admin, [{ kind: "revoke", phone_number_id: pnEdit, original_wa_message_id: `wamid.${tag}.e3`, pada: at(11).toISOString() }])).toMatchObject({ revoked: 0 });
   });
 

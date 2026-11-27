@@ -33,7 +33,7 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [x] 🤖 Halaman pemantauan di `/admin`: jumlah webhook tertunda/gagal per sumber, error terakhir, tombol "Proses ulang"
 - [x] 🤖 Status nomor: tidak ada pesan > 24 jam, event `account_update` (terputus / `PARTNER_REMOVED`)
 - [x] 🤖 Peringatan aplikasi WhatsApp Business di HP CS mendekati 14 hari tidak dibuka
-- [x] 🤖 Tangani pesan `edit` dan `revoke` (perbarui / tandai dihapus); edit/revoke lama: `npm run webhook:backfill-edits -- --apply` (👤 setujui dulu)
+- [x] 🤖 Tangani pesan `edit` dan `revoke` (perbarui / tandai dihapus); edit/revoke lama sudah di-backfill 27 Nov 2026 (`npm run webhook:backfill-edits`): 21 pesan diedit, 16 ditandai dihapus; 328 edit dari riwayat chat merujuk pesan asli yang tidak pernah dikirim Meta
 - [x] 🤖 Hapus otomatis `webhook_events` > 90 hari (lewat cron harian), juga `sync_runs`
 - ✅ Tidak ada webhook tertunda tanpa alasan; Super Admin bisa melihat dan memulihkan masalah dari `/admin`
 
