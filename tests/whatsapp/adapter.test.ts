@@ -63,13 +63,54 @@ describe("normalize", () => {
   });
 
   it("webhook tes dashboard dan account_update tidak menghasilkan pesan yang salah", () => {
-    expect(fixture("meta-dashboard-test-account-update")).toEqual({ messages: [], ignored: ["account_update"] });
+    expect(fixture("meta-dashboard-test-account-update")).toEqual({
+      messages: [],
+      updates: [],
+      // Payload contoh dashboard memakai entry.id "0": tidak ada WABA yang bisa dicocokkan.
+      accountUpdates: [{ event: "VERIFIED_ACCOUNT", wabaId: null, phoneNumber: "16505551111" }],
+      ignored: [],
+    });
     const sample = fixture("meta-dashboard-test-messages").messages;
     expect(sample).toHaveLength(1);
     expect(sample[0].phoneNumberId).toBe("123456123");
   });
 
-  it("status, edit, dan revoke diabaikan", () => {
+  it("account_update PARTNER_REMOVED membawa WABA ID", () => {
+    expect(fixture("account-update-partner-removed").accountUpdates).toEqual([
+      { event: "PARTNER_REMOVED", wabaId: "100000000000001", phoneNumber: null },
+    ]);
+  });
+
+  it("edit dan revoke (pelanggan dan echo CS) menjadi pembaruan pesan asli, bukan pesan baru", () => {
+    const { messages, updates, ignored } = fixture("coexistence-edit-revoke");
+    expect(messages).toEqual([]);
+    expect(ignored).toEqual([]);
+    expect(updates).toEqual([
+      {
+        kind: "edit",
+        phoneNumberId: "200000000000001",
+        originalWaMessageId: "wamid.UJI-ASLI-1",
+        text: "Kak, ukuran XL ready?",
+        at: new Date(1794980000 * 1000),
+      },
+      {
+        kind: "revoke",
+        phoneNumberId: "200000000000001",
+        originalWaMessageId: "wamid.UJI-ASLI-2",
+        text: null,
+        at: new Date(1794980060 * 1000),
+      },
+      {
+        kind: "edit",
+        phoneNumberId: "200000000000001",
+        originalWaMessageId: "wamid.UJI-ASLI-3",
+        text: "Ready kak, XL tinggal 2",
+        at: new Date(1794980120 * 1000),
+      },
+    ]);
+  });
+
+  it("status diabaikan; edit/revoke tanpa pesan asli dicatat tidak lengkap", () => {
     const envelope = parseEnvelope(
       JSON.stringify({
         object: "whatsapp_business_account",
@@ -93,8 +134,11 @@ describe("normalize", () => {
         ],
       }),
     )!;
-    const { messages, ignored } = normalize(envelope);
+    const { messages, updates, ignored } = normalize(envelope);
     expect(messages).toEqual([]);
-    expect(ignored).toEqual(expect.arrayContaining(["statuses", "messages:edit", "messages:revoke"]));
+    expect(updates).toEqual([]);
+    expect(ignored).toEqual(
+      expect.arrayContaining(["statuses", "messages:edit-tidak-lengkap", "messages:revoke-tidak-lengkap"]),
+    );
   });
 });

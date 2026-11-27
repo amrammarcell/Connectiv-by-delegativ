@@ -1,5 +1,5 @@
 // Memproses ulang webhook yang belum diproses (mis. nomor baru saja
-// didaftarkan, atau pemrosesan gagal).
+// didaftarkan, atau pemrosesan gagal), dari yang terlama sampai habis.
 // Pakai: npm run webhook:reprocess
 
 import { createClient } from "@supabase/supabase-js";
@@ -13,8 +13,11 @@ if (!url || !secret) {
 }
 
 const admin = createClient(url, secret, { auth: { persistSession: false } });
-const result = await processPendingEvents(admin);
+const started = Date.now();
+const r = await processPendingEvents(admin, { limit: 100_000 });
 console.log(
-  `${result.events} event diperiksa · ${result.inserted} pesan baru · ${result.duplicate} duplikat` +
-    (result.unknownNumbers.length ? ` · nomor belum terdaftar: ${result.unknownNumbers.join(", ")}` : ""),
+  `${r.events} event diperiksa (${r.processed} selesai, ${r.failed} gagal) dalam ${((Date.now() - started) / 1000).toFixed(1)} dtk · ` +
+    `${r.inserted} pesan baru · ${r.duplicate} duplikat · ${r.edited} diedit · ${r.revoked} ditarik` +
+    (r.missing ? ` · ${r.missing} edit/tarik tanpa pesan asli` : "") +
+    (r.unknownNumbers.length ? ` · nomor belum terdaftar: ${r.unknownNumbers.join(", ")}` : ""),
 );

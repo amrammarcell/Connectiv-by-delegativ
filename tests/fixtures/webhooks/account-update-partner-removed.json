@@ -1,0 +1,18 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "100000000000001",
+      "time": 1794980000,
+      "changes": [
+        {
+          "field": "account_update",
+          "value": {
+            "event": "PARTNER_REMOVED",
+            "waba_info": { "waba_id": "100000000000001", "owner_business_id": "300000000000001" }
+          }
+        }
+      ]
+    }
+  ]
+}

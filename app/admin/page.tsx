@@ -6,13 +6,37 @@ import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireSuperAdmin } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Peran } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { numberWarnings } from "@/lib/wa-health";
 import { AddNumberForm, type WorkspaceMember } from "./add-number-form";
 import { AdAccountRow, AddAdAccountForm, type AdAccountItem } from "./ad-accounts";
 import { CreateWorkspaceForm } from "./create-workspace-form";
+import { ReprocessButton } from "./reprocess-button";
 
 export const metadata: Metadata = { title: "Admin" };
+
+// Server action "Proses ulang" webhook bisa berjalan lama (riwayat chat besar).
+export const maxDuration = 300;
+
+type WebhookStat = {
+  sumber: string;
+  total: number;
+  tertunda: number;
+  gagal: number;
+  tertunda_terlama: string | null;
+  diterima_terakhir: string | null;
+  error_terakhir: string | null;
+  error_terakhir_pada: string | null;
+};
+
+const SUMBER_LABEL: Record<string, string> = { dualhook: "Dualhook", meta: "App Meta", whatsapp: "App Meta (lama)" };
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" });
+}
 
 export default function AdminPage() {
   return (
@@ -49,7 +73,9 @@ async function AdminContent() {
     .returns<{ id: string; nama: string; slug: string; dibuat_pada: string; memberships: { count: number }[] }[]>();
   const { data: numbers } = await supabase
     .from("wa_numbers")
-    .select("id, label, nomor_tampil, phone_number_id, status, terakhir_terima_pesan, workspaces(nama, slug)")
+    .select(
+      "id, label, nomor_tampil, phone_number_id, status, status_alasan, terakhir_terima_pesan, tersambung_pada, workspaces(nama, slug)",
+    )
     .order("dibuat_pada", { ascending: false })
     .returns<
       {
@@ -58,10 +84,39 @@ async function AdminContent() {
         nomor_tampil: string | null;
         phone_number_id: string;
         status: string;
+        status_alasan: string | null;
         terakhir_terima_pesan: string | null;
+        tersambung_pada: string;
         workspaces: { nama: string; slug: string };
       }[]
     >();
+
+  // Balasan CS terakhir dari aplikasi (pesan keluar non-riwayat) per nomor,
+  // untuk peringatan 14 hari Coexistence. Super Admin melihat semua pesan (RLS).
+  const lastReplies = await Promise.all(
+    (numbers ?? []).map(async (n) => {
+      const { data } = await supabase
+        .from("messages")
+        .select("dikirim_pada")
+        .eq("wa_number_id", n.id)
+        .eq("arah", "keluar")
+        .eq("dari_history", false)
+        .order("dikirim_pada", { ascending: false })
+        .limit(1)
+        .maybeSingle<{ dikirim_pada: string }>();
+      return data?.dikirim_pada ?? null;
+    }),
+  );
+  const numberRows = (numbers ?? []).map((n, i) => {
+    const terakhir_balasan_cs = lastReplies[i] ?? null;
+    return { ...n, terakhir_balasan_cs, warnings: numberWarnings({ ...n, terakhir_balasan_cs }) };
+  });
+
+  // webhook_events tidak bisa dibaca sesi user; dibaca dengan secret key
+  // setelah requireSuperAdmin di atas.
+  const { data: statsData, error: webhookStatsError } = await createAdminClient().rpc("webhook_event_stats");
+  const webhookStats = (statsData ?? []) as WebhookStat[];
+  const pendingTotal = webhookStats.reduce((sum, w) => sum + Number(w.tertunda) + Number(w.gagal), 0);
 
   const { data: memberRows } = await supabase
     .from("memberships")
@@ -92,6 +147,84 @@ async function AdminContent() {
         <CreateWorkspaceForm />
       </section>
 
+      <section aria-labelledby="h-webhook" className="rounded-xl border bg-card">
+        <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 id="h-webhook" className="text-base font-bold">
+              Pemantauan webhook WhatsApp
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tertunda = belum diproses tanpa error. Gagal = belum diproses dengan error (termasuk nomor belum terdaftar).
+              Proses ulang juga berjalan otomatis setiap hari.
+            </p>
+          </div>
+          <ReprocessButton disabled={pendingTotal === 0} />
+        </div>
+        {webhookStatsError ? (
+          <p role="alert" className="px-5 py-4 text-sm text-destructive">
+            Statistik webhook gagal dimuat: {webhookStatsError.message}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-5">Sumber</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Tertunda</TableHead>
+                  <TableHead className="text-right">Gagal</TableHead>
+                  <TableHead>Terakhir diterima</TableHead>
+                  <TableHead className="pr-5">Error terakhir</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(webhookStats ?? []).map((w) => (
+                  <TableRow key={w.sumber}>
+                    <TableCell className="pl-5 font-semibold">{SUMBER_LABEL[w.sumber] ?? w.sumber}</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(w.total).toLocaleString("id-ID")}</TableCell>
+                    <TableCell
+                      className={cn("text-right tabular-nums", Number(w.tertunda) > 0 && "font-semibold text-amber-700")}
+                    >
+                      {Number(w.tertunda).toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className={cn("text-right tabular-nums", Number(w.gagal) > 0 && "font-semibold text-destructive")}>
+                      {Number(w.gagal).toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {w.diterima_terakhir ? formatDateTime(w.diterima_terakhir) : "—"}
+                      {w.tertunda_terlama && (
+                        <span className="block text-xs text-muted-foreground">
+                          Tertunda sejak {formatDateTime(w.tertunda_terlama)}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-[320px] pr-5">
+                      {w.error_terakhir ? (
+                        <span className="flex flex-col">
+                          <span className="text-xs break-all text-destructive">{w.error_terakhir}</span>
+                          {w.error_terakhir_pada && (
+                            <span className="text-xs text-muted-foreground">{formatDateTime(w.error_terakhir_pada)}</span>
+                          )}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!webhookStats?.length && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                      Belum ada webhook diterima.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+
       <section aria-labelledby="h-nomor" className="rounded-xl border bg-card">
         <div className="border-b px-5 py-4">
           <h2 id="h-nomor" className="text-base font-bold">
@@ -109,11 +242,12 @@ async function AdminContent() {
                 <TableHead className="pl-5">Nomor</TableHead>
                 <TableHead>Workspace</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="pr-5">Pesan terakhir</TableHead>
+                <TableHead>Pesan terakhir</TableHead>
+                <TableHead className="pr-5">Balasan CS dari aplikasi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(numbers ?? []).map((n) => (
+              {numberRows.map((n) => (
                 <TableRow key={n.id}>
                   <TableCell className="pl-5">
                     <div className="flex flex-col">
@@ -124,21 +258,32 @@ async function AdminContent() {
                     </div>
                   </TableCell>
                   <TableCell>{n.workspaces.nama}</TableCell>
-                  <TableCell>{n.status === "aktif" ? "Aktif" : "Terputus"}</TableCell>
-                  <TableCell className="pr-5">
-                    {n.terakhir_terima_pesan
-                      ? new Date(n.terakhir_terima_pesan).toLocaleString("id-ID", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                          timeZone: "Asia/Jakarta",
-                        })
-                      : "Belum ada"}
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <span className={cn("font-semibold", n.status === "aktif" ? "text-primary" : "text-destructive")}>
+                        {n.status === "aktif" ? "Aktif" : "Terputus"}
+                      </span>
+                      {n.warnings.map((w) => (
+                        <span
+                          key={w.text}
+                          className={cn("max-w-[280px] text-xs", w.level === "merah" ? "text-destructive" : "text-amber-700")}
+                        >
+                          ⚠ {w.text}
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {n.terakhir_terima_pesan ? formatDateTime(n.terakhir_terima_pesan) : "Belum ada"}
+                  </TableCell>
+                  <TableCell className="pr-5 whitespace-nowrap">
+                    {n.terakhir_balasan_cs ? formatDateTime(n.terakhir_balasan_cs) : "Belum ada"}
                   </TableCell>
                 </TableRow>
               ))}
               {!numbers?.length && (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                     Belum ada nomor terdaftar.
                   </TableCell>
                 </TableRow>

@@ -29,15 +29,16 @@ npm run admin:promote -- email   # jadikan akun Super Admin
 npm run webhook:tokens   # buat token webhook WhatsApp di .env.local (tidak dicetak)
 npm run webhook:latest   # lihat webhook terakhir (-- 3 --raw untuk payload lengkap)
 npm run webhook:reprocess   # proses ulang webhook tertunda (mis. setelah nomor didaftarkan)
+npm run webhook:backfill-edits   # edit/revoke dari webhook lama (dry run; -- --apply untuk menerapkan)
 ```
 
-Webhook WhatsApp: `app/api/webhooks/whatsapp/[token]/route.ts`. Lewat Dualhook, signature Meta tidak bisa diverifikasi (secret milik Dualhook), jadi token rahasia di URL wajib. Payload mentah selalu disimpan ke `webhook_events` sebelum membalas 200, lalu diproses dengan `after()`: `lib/whatsapp/adapter.ts` (format Meta → `NormalizedMessage`) → `lib/whatsapp/processor.ts` → fungsi SQL `ingest_message` (kontak, pesan, status menunggu, atribusi, dalam satu transaksi). Nomor yang belum terdaftar di `wa_numbers` membuat event tertunda. Lihat `docs/BSP.md` dan `docs/SETUP.md` §6.
+Webhook WhatsApp: `app/api/webhooks/whatsapp/[token]/route.ts`. Lewat Dualhook, signature Meta tidak bisa diverifikasi (secret milik Dualhook), jadi token rahasia di URL wajib. Payload mentah selalu disimpan ke `webhook_events` sebelum membalas 200, lalu diproses dengan `after()`: `lib/whatsapp/adapter.ts` (format Meta → `NormalizedMessage`) → `lib/whatsapp/processor.ts` → fungsi SQL `ingest_messages` (per 200 pesan satu panggilan dan satu transaksi; tiap pesan lewat `ingest_message`: kontak, pesan, status menunggu, atribusi; lalu edit/revoke). `account_update` (mis. `PARTNER_REMOVED`) menandai `wa_numbers.status = terputus`. Nomor yang belum terdaftar di `wa_numbers` membuat event tertunda. Route webhook, cron, dan `/admin` memakai `maxDuration = 300` (batas Vercel Hobby). Pemantauan webhook (fungsi SQL `webhook_event_stats`) dan peringatan nomor (`lib/wa-health.ts`) ada di `/admin`. Cron harian juga menghapus `webhook_events` terproses dan `sync_runs` > 90 hari (`lib/retention.ts`). Lihat `docs/BSP.md` dan `docs/SETUP.md` §6.
 
 Data iklan: `lib/meta-ads/sync.ts` (Marketing API, 3 hari terakhir, upsert `ads` + `ad_insights_daily`), dipanggil oleh `/api/cron/daily` (Vercel Cron, `CRON_SECRET`) dan tombol Sync di `/admin`. Dashboard memakai fungsi SQL `dashboard_*` (security invoker, tanggal Asia/Jakarta, kohort kontak per tanggal dibuat); perhitungan turunan di `lib/dashboard.ts`.
 
 Realtime di klien wajib lewat `lib/supabase/realtime.ts` (`subscribeWithAuth`) supaya JWT user terpasang dan RLS berlaku.
 
-`npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi.
+`npm test` juga menjalankan test RLS (`tests/rls/`) terhadap project Supabase dev dari `.env.local`; test itu dilewati jika kunci tidak ada (CI). Setiap tabel baru dengan `workspace_id` wajib ditambah ke test isolasi. Test integrasi (memakai DB dev) berjalan berurutan di project Vitest `integration`; file integrasi baru wajib ditambahkan ke `INTEGRATION_TESTS` di `vitest.config.mts`.
 
 ## Auth dan akses
 

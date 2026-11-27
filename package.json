@@ -14,7 +14,8 @@
     "seed:dev": "node --env-file=.env.local scripts/seed-dev.mts",
     "webhook:tokens": "node scripts/webhook-tokens.mts",
     "webhook:latest": "node --env-file=.env.local scripts/webhook-latest.mts",
-    "webhook:reprocess": "tsx --env-file=.env.local scripts/webhook-reprocess.mts"
+    "webhook:reprocess": "tsx --env-file=.env.local scripts/webhook-reprocess.mts",
+    "webhook:backfill-edits": "tsx --env-file=.env.local scripts/webhook-backfill-edits.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

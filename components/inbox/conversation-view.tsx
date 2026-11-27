@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowLeft, FileText, Image as ImageIcon, Megaphone, Mic, Paperclip, Smartphone, Video } from "lucide-react";
+import { ArrowLeft, Ban, FileText, Image as ImageIcon, Megaphone, Mic, Paperclip, Smartphone, Video } from "lucide-react";
 import { useNow } from "@/hooks/use-now";
 import { formatClock, formatDayLabel, formatPhone, initials, isSameDay } from "@/lib/format";
 import { responseStatus, type Thresholds } from "@/lib/response-time";
@@ -72,6 +72,21 @@ export function ConversationView({
                 current.some((m) => m.id === data.id)
                   ? current
                   : [...current, data].sort((a, b) => a.dikirim_pada.localeCompare(b.dikirim_pada)),
+              );
+            },
+          )
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "messages", filter: `contact_id=eq.${initialContact.id}` },
+            (payload) => {
+              // Pesan diedit atau ditarik pengirimnya.
+              const updated = payload.new as InboxMessage;
+              setMessages((current) =>
+                current.map((m) =>
+                  m.id === updated.id
+                    ? { ...m, isi: updated.isi, diedit_pada: updated.diedit_pada, dihapus_pada: updated.dihapus_pada }
+                    : m,
+                ),
               );
             },
           )
@@ -184,6 +199,13 @@ export function ConversationView({
                     out ? "rounded-br-sm border-[#bfe3dc] bg-[#d9f0ec]" : "rounded-bl-sm bg-card",
                   )}
                 >
+                  {m.dihapus_pada ? (
+                    <span className="flex items-center gap-1.5 text-muted-foreground italic">
+                      <Ban aria-hidden className="size-4" />
+                      Pesan dihapus
+                    </span>
+                  ) : (
+                    <>
                   {MEDIA_LABEL[m.tipe] && (
                     <span className="flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-[13px] text-secondary-foreground">
                       <Icon aria-hidden className="size-[18px]" />
@@ -193,9 +215,12 @@ export function ConversationView({
                   )}
                   {m.isi && <span className="whitespace-pre-line">{m.isi}</span>}
                   {!m.isi && !MEDIA_LABEL[m.tipe] && <span className="text-muted-foreground italic">Pesan {m.tipe}</span>}
+                    </>
+                  )}
                   <span className={cn("text-[11px] text-muted-foreground", out ? "self-end" : "self-start")}>
                     {out ? "CS · dari HP · " : ""}
                     {formatClock(m.dikirim_pada)}
+                    {m.diedit_pada && !m.dihapus_pada ? " · diedit" : ""}
                     {m.dari_history ? " · riwayat" : ""}
                   </span>
                 </div>
