@@ -29,13 +29,31 @@ describe.skipIf(!supabaseEnabled)("RLS: log akses, kunjungan, alert, metrik pilo
     await Promise.all([ctx.member(ownerA, wsA, "owner"), ctx.member(csA, wsA, "cs"), ctx.member(ownerB, wsB, "owner")]);
   });
 
+  // Berjalan walau beforeAll gagal di tengah jalan (mis. migrasi belum
+  // diterapkan): setiap langkah berdiri sendiri, lalu jaring pengaman menghapus
+  // workspace run ini berdasarkan slug, dan sisa workspace membuat test gagal
+  // supaya tidak diam-diam tertinggal di DB bersama.
   afterAll(async () => {
     if (!supabaseEnabled) return;
-    if (webhookIds.length) await ctx.admin.from("webhook_events").delete().in("id", webhookIds);
-    await ctx.admin.from("ops_alerts").delete().eq("jenis", alertJenis);
-    await ctx.admin.from("admin_access_log").delete().eq("user_id", superAdmin.id);
-    await ctx.cleanup();
-  });
+    const steps: (() => PromiseLike<unknown>)[] = [
+      () => (webhookIds.length ? ctx.admin.from("webhook_events").delete().in("id", webhookIds) : Promise.resolve()),
+      () => ctx.admin.from("ops_alerts").delete().eq("jenis", alertJenis),
+      () => (superAdmin ? ctx.admin.from("admin_access_log").delete().eq("user_id", superAdmin.id) : Promise.resolve()),
+      () => ctx.cleanup(),
+      () => ctx.admin.from("workspaces").delete().like("slug", `ops-%-${ctx.run}`),
+    ];
+    for (const step of steps) {
+      try {
+        // Client Supabase mengembalikan { error } alih-alih melempar.
+        const result = (await step()) as { error?: { message: string } | null } | undefined;
+        if (result?.error) console.error("cleanup ops-activity:", result.error.message);
+      } catch (err) {
+        console.error("cleanup ops-activity:", err instanceof Error ? err.message : err);
+      }
+    }
+    const { data: left } = await ctx.admin.from("workspaces").select("slug").like("slug", `ops-%-${ctx.run}`);
+    expect(left ?? [], "workspace uji tertinggal").toEqual([]);
+  }, 120_000);
 
   describe("admin_access_log", () => {
     it("mencatat akses Super Admin non-anggota, dedupe 'lihat' 1 menit, tidak mencatat anggota", async () => {
