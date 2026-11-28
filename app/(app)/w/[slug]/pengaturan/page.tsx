@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/page-header";
+import { SettingsSkeleton } from "@/components/states";
 import { requireWorkspace } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Peran } from "@/lib/types";
@@ -15,7 +16,7 @@ export default function Page({ params }: PageProps<"/w/[slug]/pengaturan">) {
   return (
     <>
       <PageHeader title="Pengaturan" description="Waktu tanggapan, stage pipeline, user, dan peran" />
-      <Suspense fallback={<p className="m-7 text-sm text-muted-foreground">Memuat…</p>}>
+      <Suspense fallback={<SettingsSkeleton />}>
         <MembersSection params={params} />
       </Suspense>
     </>
