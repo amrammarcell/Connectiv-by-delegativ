@@ -224,6 +224,48 @@ describe.skipIf(!enabled)("RLS: isolasi workspace", { timeout: 60_000 }, () => {
     });
   });
 
+  describe("wa_business_tokens", () => {
+    it("token bisnis tidak bisa dibaca atau ditulis user mana pun, termasuk Owner workspace-nya", async () => {
+      const wabaId = `rls-waba-${run}`;
+      const { error: seedError } = await admin
+        .from("wa_business_tokens")
+        .insert({ workspace_id: wsA, waba_id: wabaId, token_terenkripsi: "v1:x:y:z" });
+      expect(seedError).toBeNull();
+
+      for (const user of [ownerA, supervisorA, csA, ownerB]) {
+        const read = await user.client.from("wa_business_tokens").select("token_terenkripsi").eq("waba_id", wabaId);
+        expect(read.data ?? []).toEqual([]);
+      }
+      const write = await ownerA.client
+        .from("wa_business_tokens")
+        .insert({ workspace_id: wsA, waba_id: `${wabaId}-2`, token_terenkripsi: "v1:a:b:c" });
+      expect(write.error).not.toBeNull();
+      const update = await ownerA.client
+        .from("wa_business_tokens")
+        .update({ token_terenkripsi: "diganti" })
+        .eq("waba_id", wabaId)
+        .select("id");
+      expect(update.data ?? []).toEqual([]);
+      const anon = await createClient(url!, publishableKey!).from("wa_business_tokens").select("id");
+      expect(anon.data ?? []).toEqual([]);
+    });
+
+    it("Owner tidak bisa mengubah sumber atau status sinkronisasi nomor", async () => {
+      const { data: number, error } = await admin
+        .from("wa_numbers")
+        .insert({ workspace_id: wsA, phone_number_id: `9${Date.now()}`, waba_id: "1", label: "RLS" })
+        .select("id, sumber")
+        .single();
+      expect(error).toBeNull();
+      expect(number!.sumber).toBe("dualhook");
+      const res = await ownerA.client.from("wa_numbers").update({ sumber: "resmi", sync_kontak_status: "diminta" }).eq("id", number!.id);
+      expect(res.error).not.toBeNull();
+      const label = await ownerA.client.from("wa_numbers").update({ label: "Baru" }).eq("id", number!.id).select("id");
+      expect(label.data).toHaveLength(1);
+      await admin.from("wa_numbers").delete().eq("id", number!.id);
+    });
+  });
+
   describe("profil", () => {
     it("user tidak bisa menjadikan dirinya Super Admin", async () => {
       const { error } = await csA.client.from("profiles").update({ is_super_admin: true }).eq("id", csA.id);
