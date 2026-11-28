@@ -41,3 +41,8 @@ export type InboxMessage = {
 };
 
 export type Lookup = Record<string, string>;
+
+// Ukuran halaman. Di sini (bukan di modul "use client") supaya Server
+// Component mendapat angka, bukan referensi klien.
+export const INBOX_PAGE_SIZE = 50;
+export const MESSAGE_PAGE_SIZE = 80;

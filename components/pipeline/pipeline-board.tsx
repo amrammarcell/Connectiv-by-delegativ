@@ -18,7 +18,8 @@ import { GripVertical } from "lucide-react";
 import { moveContactStage } from "@/app/actions/contacts";
 import { DealDialog } from "@/components/deals/deal-dialog";
 import { ResponseBadge, SourceBadge } from "@/components/inbox/response-badge";
-import type { InboxContact } from "@/components/inbox/types";
+import type { InboxContact, Lookup } from "@/components/inbox/types";
+import { adLabel } from "@/lib/inbox-filters";
 import { useNow } from "@/hooks/use-now";
 import { ALASAN_LABEL, formatRupiah, latestDealByContact, type Deal, type DealStatus } from "@/lib/deals";
 import { formatPhone, initials } from "@/lib/format";
@@ -43,6 +44,7 @@ export function PipelineBoard({
   initialContacts,
   initialDeals,
   thresholds,
+  adNames,
   canFilterByCs,
 }: {
   slug: string;
@@ -52,6 +54,7 @@ export function PipelineBoard({
   initialContacts: InboxContact[];
   initialDeals: Deal[];
   thresholds: Thresholds;
+  adNames: Lookup;
   canFilterByCs: boolean;
 }) {
   const [contacts, setContacts] = useState(initialContacts);
@@ -140,12 +143,12 @@ export function PipelineBoard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 sm:px-7">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-3 pt-3 sm:px-7 sm:pt-4">
         <p className="text-[13px] text-muted-foreground">
           {activeCount} kontak aktif · {formatRupiah(closingTotal)} closing · seret kartu atau pakai tombol di kartu
         </p>
         {canFilterByCs && members.length > 0 && (
-          <div role="group" aria-label="Filter CS" className="flex flex-wrap gap-2">
+          <div role="group" aria-label="Filter CS" className="-mx-3 flex w-[calc(100%+1.5rem)] gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:px-0 [&>*]:shrink-0">
             {[{ id: "", nama: "Semua" }, ...members].map((m) => (
               <button
                 key={m.id || "semua"}
@@ -183,8 +186,9 @@ export function PipelineBoard({
         onDragEnd={onDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="min-h-0 flex-1 overflow-x-auto px-4 pt-3 pb-6 sm:px-7">
-          <div className="grid min-w-[1320px] grid-cols-[repeat(6,minmax(210px,1fr))] gap-3.5">
+        {/* HP: kolom digeser horizontal satu per satu (snap). Laptop: semua kolom berdampingan. */}
+        <div className="min-h-0 flex-1 snap-x snap-mandatory scroll-px-3 overflow-x-auto px-3 pt-3 pb-6 sm:snap-none sm:px-7">
+          <div className="grid auto-cols-[82vw] grid-flow-col gap-3 sm:auto-cols-[minmax(210px,1fr)] sm:gap-3.5 lg:min-w-[1320px]">
             {stages.map((stage, index) => {
               const cards = visible
                 .filter((c) => c.stage_id === stage.id)
@@ -206,6 +210,7 @@ export function PipelineBoard({
                       stage={stage}
                       deal={dealByContact[c.id]}
                       assignee={c.assigned_to ? memberName[c.assigned_to] : undefined}
+                      adName={adLabel(c.ad_id, c.referral_headline, adNames)}
                       status={stage.tipe === "normal" ? responseStatus(c, now, thresholds) : null}
                       nextStage={position >= 0 ? normalStages[position + 1] : undefined}
                       onMove={(stageId) => move(c, stageId)}
@@ -257,7 +262,7 @@ function StageColumn({
       ref={setNodeRef}
       aria-label={stage.nama}
       className={cn(
-        "flex min-h-[520px] flex-col gap-2.5 rounded-2xl p-2.5 transition-colors",
+        "flex min-h-[420px] snap-start flex-col gap-2.5 rounded-2xl p-2.5 transition-colors sm:min-h-[520px]",
         stage.tipe === "normal" ? "bg-[#eef1f4]" : "bg-[#f0f2f5]",
         isOver && "bg-accent ring-2 ring-primary/40",
       )}
@@ -280,6 +285,7 @@ function ContactCard({
   stage,
   deal,
   assignee,
+  adName,
   status,
   nextStage,
   onMove,
@@ -290,6 +296,7 @@ function ContactCard({
   stage: Stage;
   deal: Deal | undefined;
   assignee: string | undefined;
+  adName: string;
   status: ReturnType<typeof responseStatus>;
   nextStage: Stage | undefined;
   onMove: (stageId: string) => void;
@@ -331,7 +338,7 @@ function ContactCard({
           {assignee ? initials(assignee) : "?"}
         </span>
       </div>
-      <SourceBadge sumber={contact.sumber} headline={contact.referral_headline} />
+      <SourceBadge sumber={contact.sumber} label={adName} />
       {status?.waiting && (
         <span suppressHydrationWarning>
           <ResponseBadge status={status} />

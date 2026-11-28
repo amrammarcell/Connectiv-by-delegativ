@@ -65,13 +65,16 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 ## 4. Pengalaman pengguna (UX)
 **Fokus:** nyaman dipakai CS dan supervisor setiap hari, di laptop maupun HP.
 
-- [ ] 🤖 Tampilan HP: sidebar menjadi menu ringkas/bawah; Inbox, Pipeline, Dashboard enak di layar kecil
-- [ ] 🤖 Filter Inbox lanjutan: CS, stage, iklan tertentu, rentang tanggal
-- [ ] 🤖 Filter Dashboard per nomor WA dan per CS
-- [ ] 🤖 Penanda chat belum dibaca dan notifikasi chat baru di browser
-- [ ] 🤖 Nama iklan dari Meta (tabel `ads`) dipakai di Inbox, Kontak, Pipeline
-- [ ] 🤖 Status kosong, loading, dan pesan error yang jelas di semua halaman
+- [x] 🤖 Tampilan HP: sidebar menjadi menu ringkas/bawah; Inbox, Pipeline, Dashboard enak di layar kecil
+- [x] 🤖 Filter Inbox lanjutan: CS, stage, iklan tertentu, rentang tanggal
+- [x] 🤖 Filter Dashboard per nomor WA dan per CS
+- [x] 🤖 Penanda chat belum dibaca dan notifikasi chat baru di browser
+- [x] 🤖 Nama iklan dari Meta (tabel `ads`) dipakai di Inbox, Kontak, Pipeline
+- [x] 🤖 Status kosong, loading, dan pesan error yang jelas di semua halaman
 - [ ] 👤 Kumpulkan masukan CS dan supervisor Sobatimport tiap minggu
+
+*Catatan jalur 4 (29 Nov 2026):* migrasi `20261128110000_ux_read_state_filters.sql` (tabel `contact_reads`, fungsi `inbox_contacts`, `inbox_summary`, `mark_all_contacts_read`, `workspace_ad_names`, `dashboard_*_v2`; aditif). Filter Inbox ada di URL (`?tab=&cs=&stage=&iklan=&dari=&sampai=&nomor=&q=`); rentang tanggal Inbox = tanggal pesan terakhir (WIB). Filter Dashboard per CS/nomor tidak memecah spend iklan (spend penuh tiap iklan). Nama iklan untuk CS lewat `workspace_ad_names` (security definer, hanya id + nama). Notifikasi browser hanya selama tab Connectiv terbuka (belum ada push/service worker).
+
 - ✅ Supervisor bisa memantau dan CS bisa bekerja penuh dari HP
 
 ## 5. Kesiapan produksi
@@ -144,7 +147,7 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 🤖 Ambil profil anggota workspace saja, bukan semua profil yang terlihat
 
 **D. Data yang membesar**
-- [ ] 🤖 Paginasi daftar Inbox dan Kontak; "muat pesan lama" di percakapan
+- [x] 🤖 Paginasi daftar Inbox dan Kontak; "muat pesan lama" di percakapan
 - [ ] 🤖 Ingest berkelompok (bersama jalur 1)
 - [ ] 🤖 Arsip/hapus data lama (`webhook_events`, `sync_runs`)
 

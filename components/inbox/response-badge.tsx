@@ -17,15 +17,17 @@ export function ResponseBadge({ status, long = false }: { status: ResponseStatus
   );
 }
 
-export function SourceBadge({ sumber, headline }: { sumber: "ctwa" | "organik"; headline: string | null }) {
+// label = nama iklan (lihat adLabel di lib/inbox-filters.ts); diabaikan untuk organik.
+export function SourceBadge({ sumber, label }: { sumber: "ctwa" | "organik"; label: string }) {
   return (
     <span
+      title={sumber === "ctwa" ? label : undefined}
       className={cn(
-        "max-w-[200px] truncate rounded-full px-2 py-0.5 text-xs",
+        "max-w-[220px] truncate rounded-full px-2 py-0.5 text-xs",
         sumber === "ctwa" ? "bg-[#eef4ff] text-[#1d4b8f]" : "bg-muted text-muted-foreground",
       )}
     >
-      {sumber === "ctwa" ? `Iklan · ${headline ?? "Tanpa judul"}` : "Organik"}
+      {sumber === "ctwa" ? `Iklan · ${label}` : "Organik"}
     </span>
   );
 }
