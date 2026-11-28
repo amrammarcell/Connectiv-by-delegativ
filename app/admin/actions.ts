@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { ensureUser } from "@/lib/accounts";
 import { requireSuperAdmin } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { syncAdAccount } from "@/lib/meta-ads/sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SLUG_PATTERN } from "@/lib/text";
 import { processPendingEvents } from "@/lib/whatsapp/processor";
+import { workspaceTags } from "@/lib/workspace-cache";
 import type { FormState } from "@/app/actions/auth";
 
 export type CreateWorkspaceState = {
@@ -105,6 +106,7 @@ export async function addWaNumber(_prev: FormState, formData: FormData): Promise
     return { error: error.code === "23505" ? "Phone Number ID ini sudah terdaftar." : "Gagal menambah nomor." };
   }
 
+  updateTag(workspaceTags.numbers(workspaceId));
   // Webhook yang sempat tertunda karena nomor ini belum terdaftar.
   const result = await processPendingEvents(admin, { deadline: Date.now() + 60_000 });
   refresh();

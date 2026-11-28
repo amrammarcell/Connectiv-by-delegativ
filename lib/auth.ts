@@ -14,11 +14,17 @@ export type SessionUser = {
   isSuperAdmin: boolean;
 };
 
-export const getUser = cache(async (): Promise<SessionUser | null> => {
+// ID user dari JWT sesi (getClaims memverifikasi token).
+const getSessionUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
+  return data?.claims?.sub ?? null;
+});
+
+export const getUser = cache(async (): Promise<SessionUser | null> => {
+  const userId = await getSessionUserId();
   if (!userId) return null;
+  const supabase = await createClient();
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -57,24 +63,27 @@ export type WorkspaceAccess = {
 
 export const requireWorkspace = cache(
   async (slug: string): Promise<WorkspaceAccess> => {
-    const user = await requireUser();
+    const userId = await getSessionUserId();
+    if (!userId) redirect("/login");
     const supabase = await createClient();
 
-    const { data: workspace } = await supabase
-      .from("workspaces")
-      .select("id, nama, slug, batas_kuning_menit, batas_merah_menit")
-      .eq("slug", slug)
-      .maybeSingle<Workspace>();
+    // Profil dan workspace + peran dibaca paralel; peran ikut di query
+    // workspace (embed memberships milik user ini) supaya tidak ada round trip
+    // tambahan.
+    const [user, { data: row }] = await Promise.all([
+      requireUser(),
+      supabase
+        .from("workspaces")
+        .select("id, nama, slug, batas_kuning_menit, batas_merah_menit, memberships(peran)")
+        .eq("slug", slug)
+        .eq("memberships.user_id", userId)
+        .maybeSingle<Workspace & { memberships: { peran: Peran }[] }>(),
+    ]);
     // RLS menyembunyikan workspace milik orang lain, jadi tampil sebagai 404.
-    if (!workspace) notFound();
+    if (!row) notFound();
 
-    const { data: membership } = await supabase
-      .from("memberships")
-      .select("peran")
-      .eq("workspace_id", workspace.id)
-      .eq("user_id", user.id)
-      .maybeSingle<{ peran: Peran }>();
-    const peran = membership?.peran ?? null;
+    const { memberships, ...workspace } = row;
+    const peran = memberships[0]?.peran ?? null;
 
     return {
       user,

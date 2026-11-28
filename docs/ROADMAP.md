@@ -138,20 +138,33 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 🤖 Pantau query lambat (Supabase Advisors / Query Performance)
 
 **C. Index dan query**
-- [ ] 🤖 Index untuk dashboard: `contacts(workspace_id, dibuat_pada)`, `deals(contact_id, status)`, `messages(contact_id, arah, dikirim_pada)`, `stage_history(ke_stage)`
-- [ ] 🤖 Fungsi RLS dievaluasi sekali per query (pola `(select …)`), bukan per baris
-- [ ] 🤖 Kurangi query berurutan di Inbox, Kontak, detail kontak
-- [ ] 🤖 Ambil profil anggota workspace saja, bukan semua profil yang terlihat
+- [x] 🤖 Index untuk dashboard: `contacts(workspace_id, (dibuat_pada at time zone 'Asia/Jakarta')::date)` (ekspresi yang sama dengan filter kohort), `deals(contact_id, status)`, `messages(contact_id, arah, dikirim_pada) where not dari_history`, `stage_history(ke_stage)`
+- [x] 🤖 Fungsi RLS dievaluasi sekali per query (pola `(select …)`), bukan per baris
+- [x] 🤖 Kurangi query berurutan di Inbox, Kontak, detail kontak
+- [x] 🤖 Ambil profil anggota workspace saja, bukan semua profil yang terlihat
 
 **D. Data yang membesar**
 - [ ] 🤖 Paginasi daftar Inbox dan Kontak; "muat pesan lama" di percakapan
-- [ ] 🤖 Ingest berkelompok (bersama jalur 1)
-- [ ] 🤖 Arsip/hapus data lama (`webhook_events`, `sync_runs`)
+- [x] 🤖 Ingest berkelompok (selesai di jalur 1: `ingest_messages`)
+- [x] 🤖 Arsip/hapus data lama (`webhook_events`, `sync_runs`; selesai di jalur 1: cron harian)
 
 **E. Cache dan pemantauan**
-- [ ] 🤖 Cache data yang jarang berubah (stage, anggota, nomor WA) dengan cache Next.js 16 + invalidasi saat diubah
-- [ ] 🤖 Pantau ukuran database dan jumlah koneksi Realtime
+- [x] 🤖 Cache data yang jarang berubah (stage, anggota, nomor WA) dengan cache Next.js 16 + invalidasi saat diubah
+- [x] 🤖 Pantau ukuran database (kartu "Ukuran database" di `/admin`, fungsi `db_size_report`); jumlah koneksi Realtime dilihat di dashboard Supabase (Realtime → Reports)
 - ✅ Inbox dan Dashboard terbuka < 1 detik untuk workspace dengan puluhan ribu pesan
+
+*Catatan 9B–9E (29 Nov 2026):* diukur dengan `npm run perf:pages` (workspace `sobat-import`: 3.614 kontak, 46.652 pesan; median 5 putaran dari laptop ke database Seoul, ±160 ms per round trip; secret key, jadi biaya RLS belum termasuk; isi `PERF_EMAIL`/`PERF_PASSWORD` akun anggota/Super Admin untuk mengukur dengan RLS). Yang dihitung hanya query database per halaman, berurutan per tahap seperti kodenya.
+
+| Halaman | Sebelum (tahap) | Sesudah (tahap) |
+|---|---|---|
+| Inbox (daftar) | 938–1.048 ms (5) | 441 ms (2) |
+| Percakapan | 986–1.210 ms (6) | 345 ms (2) |
+| Kontak | 1.042–1.127 ms (5) | 566 ms (2) |
+| Detail kontak | 955–1.020 ms (6) | 339 ms (2) |
+| Pipeline | 757–863 ms (4) | 445 ms (2) |
+| Dashboard (30 hari) | 735–757 ms (4) | 378 ms (2) |
+
+Sumber penghematan: `requireWorkspace` membaca profil dan workspace + peran sekaligus (3 tahap → 1), query halaman paralel setelah akses terbukti, dan stage/anggota/label nomor WA dari cache (`lib/workspace-cache.ts`, angka "sesudah" = cache hangat). Dari Vercel `icn1` round trip jauh lebih kecil, jadi angka absolut produksi lebih rendah; biaya RLS (policy baru di migrasi `20261128140000_perf_indexes_rls.sql`) dan index baru baru terlihat setelah migrasi diterapkan, ukur ulang dengan sesi user.
 
 ---
 

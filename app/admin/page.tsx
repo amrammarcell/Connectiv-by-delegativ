@@ -14,6 +14,7 @@ import { numberWarnings } from "@/lib/wa-health";
 import { AddNumberForm, type WorkspaceMember } from "./add-number-form";
 import { AdAccountRow, AddAdAccountForm, type AdAccountItem } from "./ad-accounts";
 import { CreateWorkspaceForm } from "./create-workspace-form";
+import { DbSizeCard } from "./db-size-card";
 import { ReprocessButton } from "./reprocess-button";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -57,6 +58,9 @@ export default function AdminPage() {
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-7">
         <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat…</p>}>
           <AdminContent />
+        </Suspense>
+        <Suspense fallback={null}>
+          <DbSizeCard />
         </Suspense>
       </main>
     </div>

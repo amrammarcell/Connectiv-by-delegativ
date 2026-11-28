@@ -63,7 +63,7 @@ Di laptop pengembang (Windows), Node ada di `C:\Program Files\nodejs`. Jika `nod
 
 - **Bahasa UI Indonesia.** Format angka/Rupiah `id-ID`, zona waktu `Asia/Jakarta`. Kode, nama variabel, dan pesan commit dalam bahasa Inggris; komentar boleh Indonesia.
 - **Isolasi workspace di database.** Setiap tabel dengan `workspace_id` wajib RLS. Query dari UI selalu lewat `lib/supabase/server.ts` atau `client.ts` (sesi user).
-- **`lib/supabase/admin.ts` melewati RLS.** Hanya untuk webhook, cron, dan halaman Super Admin.
+- **`lib/supabase/admin.ts` melewati RLS.** Hanya untuk webhook, cron, halaman Super Admin, dan cache data workspace yang jarang berubah (`lib/workspace-cache.ts`: stage, anggota, label nomor WA; dipanggil hanya setelah `requireWorkspace`, invalidasi dengan `updateTag(workspaceTags.*)` di Server Action yang mengubahnya).
 - **Rahasia hanya di env var** (`.env.local`, Vercel). Jangan menulis kunci di kode, test, log, atau chat. Variabel baru: tambahkan ke schema Zod dan `.env.example`.
 - **Test wajib** untuk webhook handler (adapter + processor, pakai fixture payload Meta) dan RLS (isolasi antar workspace dan peran).
 - **Satu fitur per sesi**: rencana → kode → `lint`, `typecheck`, `test` → commit.

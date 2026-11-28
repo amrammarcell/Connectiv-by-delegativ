@@ -3,6 +3,7 @@ import { Eye } from "lucide-react";
 import { InboxList } from "@/components/inbox/inbox-list";
 import { CONTACT_COLUMNS, type InboxContact } from "@/components/inbox/types";
 import { PageHeader } from "@/components/page-header";
+import { requireWorkspace } from "@/lib/auth";
 import { getInboxLookups } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
 
@@ -27,16 +28,19 @@ export default function InboxLayout({ children, params }: LayoutProps<"/w/[slug]
 
 async function InboxListLoader({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { access, numbers, thresholds } = await getInboxLookups(slug);
+  const access = await requireWorkspace(slug);
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("contacts")
-    .select(CONTACT_COLUMNS)
-    .eq("workspace_id", access.workspace.id)
-    .not("pesan_terakhir_pada", "is", null)
-    .order("pesan_terakhir_pada", { ascending: false })
-    .limit(300)
-    .returns<InboxContact[]>();
+  const [{ numbers, thresholds }, { data }] = await Promise.all([
+    getInboxLookups(slug),
+    supabase
+      .from("contacts")
+      .select(CONTACT_COLUMNS)
+      .eq("workspace_id", access.workspace.id)
+      .not("pesan_terakhir_pada", "is", null)
+      .order("pesan_terakhir_pada", { ascending: false })
+      .limit(300)
+      .returns<InboxContact[]>(),
+  ]);
 
   return (
     <InboxList

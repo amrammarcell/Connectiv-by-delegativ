@@ -4,7 +4,9 @@ import { publicEnv } from "@/lib/env";
 import { serverEnv } from "@/lib/env.server";
 
 // Client dengan secret key: MELEWATI RLS. Hanya untuk webhook, cron, dan
-// halaman Super Admin. Jangan dipakai untuk melayani request user biasa.
+// halaman Super Admin, plus cache data workspace di lib/workspace-cache.ts
+// (hanya dibaca setelah requireWorkspace). Jangan dipakai untuk melayani
+// request user biasa.
 export function createAdminClient() {
   return createClient(
     publicEnv().NEXT_PUBLIC_SUPABASE_URL,
