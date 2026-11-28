@@ -56,9 +56,9 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 👤 Verifikasi bisnis PT Trinitas Delegasi Kreatif (dokumen sesuai alamat, website, konfirmasi lewat telepon/SMS)
 - [ ] 👤 App Review `whatsapp_business_management` dan `whatsapp_business_messaging` (naskah video di `docs/TECH-PROVIDER.md`)
 - [ ] 👤 Facebook Login for Business → Configuration Embedded Signup → catat Configuration ID
-- [ ] 🤖 Sprint 2b: tombol "Tambah nomor" (Embedded Signup + Coexistence), tukar `code` → token, `subscribed_apps`, token tersimpan terenkripsi
-- [ ] 🤖 Sinkronisasi kontak lalu riwayat otomatis (dalam 24 jam), status di UI
-- [ ] 🤖 Pengaturan → Nomor WhatsApp untuk Owner: label, CS pemilik, status
+- [x] 🤖 Sprint 2b: tombol "Tambah nomor" (Embedded Signup + Coexistence), tukar `code` → token, `subscribed_apps`, token tersimpan terenkripsi (kode siap di balik feature flag; aktif setelah env Meta diisi, lihat `docs/TECH-PROVIDER.md` Tahap 4)
+- [x] 🤖 Sinkronisasi kontak lalu riwayat otomatis (dalam 24 jam), status di UI (tombol Coba lagi + cron harian)
+- [x] 🤖 Pengaturan → Nomor WhatsApp untuk Owner: label, CS pemilik, status, sumber koneksi (Dualhook / resmi)
 - [ ] 👤🤖 Pindah nomor Sobatimport dari Dualhook ke jalur resmi (jam sepi), batalkan Dualhook
 - ✅ Owner klien menambah nomor sales sendiri; tidak ada nomor yang bergantung pada Dualhook
 

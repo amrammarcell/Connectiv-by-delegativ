@@ -1,4 +1,5 @@
-import { metaAdsEnv } from "@/lib/env.server";
+import { metaAdsEnv, techProviderEnv } from "@/lib/env.server";
+import { runPendingSyncs, supabaseOnboardingStore } from "@/lib/whatsapp/onboarding";
 import { syncAllAdAccounts } from "@/lib/meta-ads/sync";
 import { purgeOldRecords } from "@/lib/retention";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -24,9 +25,18 @@ export async function GET(request: Request) {
   const ads = env.META_ADS_ACCESS_TOKEN
     ? await syncAllAdAccounts(admin, env.META_ADS_ACCESS_TOKEN, { graphVersion: env.META_GRAPH_VERSION })
     : "META_ADS_ACCESS_TOKEN belum diisi";
+  // Jalur resmi: ulangi sinkronisasi kontak/riwayat yang gagal (masih dalam 24 jam).
+  const tp = techProviderEnv();
+  const smbSync = tp
+    ? await runPendingSyncs(
+        supabaseOnboardingStore(admin),
+        { encryptionKey: tp.WHATSAPP_TOKEN_ENCRYPTION_KEY, graph: { graphVersion: tp.META_GRAPH_VERSION } },
+        null,
+      ).catch((err: unknown) => ({ error: err instanceof Error ? err.message : String(err) }))
+    : "jalur resmi belum aktif";
   const retention = await purgeOldRecords(admin).catch((err: unknown) => ({
     error: err instanceof Error ? err.message : String(err),
   }));
 
-  return Response.json({ webhooks, ads, retention });
+  return Response.json({ webhooks, ads, smbSync, retention });
 }
