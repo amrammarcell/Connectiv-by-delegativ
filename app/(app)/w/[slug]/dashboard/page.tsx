@@ -3,11 +3,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CalendarDays, Lightbulb } from "lucide-react";
 import { AdsTable } from "@/components/dashboard/ads-table";
+import { FilterForm } from "@/components/filter-form";
+import { DashboardSkeleton } from "@/components/states";
 import { PageHeader } from "@/components/page-header";
-import { requireWorkspace } from "@/lib/auth";
+import { logPageVisit } from "@/lib/activity";
 import { cheapChatInsight, dateRange, parseRange, RANGES, summarize, withMetrics, type AdRow } from "@/lib/dashboard";
 import { ALASAN_LABEL, formatRupiah, type AlasanLost } from "@/lib/deals";
 import { formatDuration } from "@/lib/response-time";
+import { getInboxLookups } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { getMembers } from "@/lib/workspace-data";
@@ -18,7 +21,7 @@ export default function Page({ params, searchParams }: PageProps<"/w/[slug]/dash
   return (
     <>
       <PageHeader title="Dashboard" description="Performa iklan sampai closing" />
-      <Suspense fallback={<p className="m-7 text-sm text-muted-foreground">Menghitung…</p>}>
+      <Suspense fallback={<DashboardSkeleton />}>
         <DashboardContent params={params} searchParams={searchParams} />
       </Suspense>
     </>
@@ -52,7 +55,7 @@ async function DashboardContent({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [{ slug }, query] = await Promise.all([params, searchParams]);
-  const access = await requireWorkspace(slug);
+  const { access, numbers } = await getInboxLookups(slug);
   if (!(access.canManage || access.peran === "supervisor")) {
     return (
       <p className="m-7 max-w-xl rounded-xl border bg-card p-6 text-sm text-muted-foreground">
@@ -61,18 +64,32 @@ async function DashboardContent({
     );
   }
 
+  // Metrik pilot: Owner/Supervisor membuka dashboard ≥ 3x per minggu.
+  logPageVisit(access.user.id, access.workspace.id, "dashboard");
+
   const range = parseRange(query.rentang);
   const { dari, sampai } = dateRange(range);
   const ws = access.workspace.id;
+  const members = await getMembers(slug);
+  const nomor = typeof query.nomor === "string" && numbers[query.nomor] ? query.nomor : "";
+  const cs = typeof query.cs === "string" && members.some((m) => m.id === query.cs) ? query.cs : "";
+  const filter = { ws, dari, sampai, p_wa_number: nomor || null, p_cs: cs || null };
   const supabase = await createClient();
-  const [ads, funnel, lost, response, accounts, members] = await Promise.all([
-    supabase.rpc("dashboard_ads", { ws, dari, sampai }),
-    supabase.rpc("dashboard_funnel", { ws, dari, sampai }),
-    supabase.rpc("dashboard_lost_reasons", { ws, dari, sampai }),
-    supabase.rpc("dashboard_response", { ws, dari, sampai }),
+  const [ads, funnel, lost, response, accounts] = await Promise.all([
+    supabase.rpc("dashboard_ads_v2", filter),
+    supabase.rpc("dashboard_funnel_v2", filter),
+    supabase.rpc("dashboard_lost_reasons_v2", filter),
+    supabase.rpc("dashboard_response_v2", filter),
     supabase.from("ad_accounts").select("status_sync, terakhir_sync_pada").eq("workspace_id", ws),
-    getMembers(slug),
   ]);
+  for (const r of [ads, funnel, lost, response]) if (r.error) throw new Error(`dashboard: ${r.error.message}`);
+  const linkQuery = (rentang: string) => {
+    const params = new URLSearchParams({ rentang });
+    if (nomor) params.set("nomor", nomor);
+    if (cs) params.set("cs", cs);
+    return `/w/${slug}/dashboard?${params}`;
+  };
+  const filtered = Boolean(nomor || cs);
   const funnelData = (funnel.data ?? []) as FunnelRow[];
   const lostData = (lost.data ?? []) as LostRow[];
   const responseData = (response.data ?? []) as ResponseRow[];
@@ -116,7 +133,7 @@ async function DashboardContent({
           {(Object.keys(RANGES) as (keyof typeof RANGES)[]).map((key) => (
             <Link
               key={key}
-              href={`/w/${slug}/dashboard?rentang=${key}`}
+              href={linkQuery(key)}
               aria-current={range === key ? "page" : undefined}
               className={cn(
                 "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold",
@@ -128,6 +145,38 @@ async function DashboardContent({
             </Link>
           ))}
         </nav>
+        <FilterForm key={`${nomor}-${cs}`} action={`/w/${slug}/dashboard`} className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <input type="hidden" name="rentang" value={range} />
+          {Object.keys(numbers).length > 1 && (
+            <select name="nomor" aria-label="Filter nomor WhatsApp" defaultValue={nomor} className="h-9 min-w-0 rounded-lg border border-input bg-card px-2.5 text-sm">
+              <option value="">Semua nomor WA</option>
+              {Object.entries(numbers).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
+          <select name="cs" aria-label="Filter CS" defaultValue={cs} className="h-9 min-w-0 rounded-lg border border-input bg-card px-2.5 text-sm">
+            <option value="">Semua CS</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nama}
+              </option>
+            ))}
+          </select>
+          {filtered && (
+            <Link
+              href={linkQuery(range)}
+              className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-[13px] font-semibold text-primary hover:bg-muted"
+            >
+              Hapus filter
+            </Link>
+          )}
+        </FilterForm>
+      </div>
+
+      <div className="-mt-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[13px] text-muted-foreground">
           {dari} s/d {sampai} ·{" "}
           {lastSync
@@ -136,6 +185,14 @@ async function DashboardContent({
         </p>
       </div>
 
+      {filtered && (
+        <p className="rounded-xl border border-dashed bg-card px-4 py-3 text-[13px] text-secondary-foreground">
+          Filter {[nomor && `nomor ${numbers[nomor]}`, cs && `CS ${members.find((m) => m.id === cs)?.nama}`].filter(Boolean).join(" dan ")}{" "}
+          berlaku untuk chat, closing, revenue, funnel, alasan Lost, dan kecepatan respon. Spend iklan tidak bisa dipecah per
+          nomor atau CS, jadi biaya per closing dan ROAS memakai spend penuh tiap iklan.
+        </p>
+      )}
+
       {!accounts.data?.length && (
         <p className="rounded-xl border border-dashed bg-card px-4 py-3 text-[13px] text-secondary-foreground">
           Data spend iklan belum ada. Hubungkan ad account Meta di halaman Admin supaya biaya per chat, biaya per closing, dan
@@ -143,14 +200,14 @@ async function DashboardContent({
         </p>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(170px,1fr))] sm:gap-3">
         {tiles.map((t) => (
           <div
             key={t.label}
-            className={cn("flex flex-col gap-1 rounded-2xl px-4 py-3.5", t.highlight ? "bg-sidebar text-white" : "border bg-card")}
+            className={cn("flex min-w-0 flex-col gap-1 rounded-2xl px-3 py-3 sm:px-4 sm:py-3.5", t.highlight ? "bg-sidebar text-white" : "border bg-card")}
           >
             <span className={cn("text-xs font-semibold", t.highlight ? "text-[#9de5d9]" : "text-muted-foreground")}>{t.label}</span>
-            <span className="text-2xl font-bold tracking-tight">{t.value}</span>
+            <span className="text-xl font-bold tracking-tight sm:text-2xl">{t.value}</span>
             <span className={cn("text-xs", t.highlight ? "text-sidebar-foreground" : "text-muted-foreground")}>{t.sub}</span>
           </div>
         ))}

@@ -49,7 +49,7 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [x] 🤖 Riwayat chat: `media_placeholder` lalu detail media yang menyusul
 - [ ] 👤 Simpan API key Dualhook Sobatimport di env (tidak lewat chat): `DUALHOOK_API_KEYS=<phone_number_id>:dh_live_...` di `.env.local` dan Vercel
 
-*Catatan jalur 2:* migrasi `20261128100000_message_media.sql`. Media diunduh di `after()` route webhook (`lib/whatsapp/media.ts`, `downloadPendingMedia`) dan diulang cron harian (maks. 5 percobaan; media id > 7 hari langsung `tidak_tersedia`). Sumber per nomor: API key Dualhook jika ada di `DUALHOOK_API_KEYS`, selain itu Graph API dengan `WHATSAPP_ACCESS_TOKEN`; tanpa keduanya status `gagal` + alasan, dicoba lagi setelah kunci diisi. File dibuka lewat `/api/media/<id>` (cek sesi + RLS, alihkan ke signed URL 1 jam). Batas file 50 MB (batas global Supabase paket gratis).
+*Catatan jalur 2:* migrasi `20261128100000_message_media.sql`. Media diunduh di `after()` route webhook (`lib/whatsapp/media.ts`, `downloadPendingMedia`) dan diulang cron harian (maks. 5 percobaan; media id > 7 hari langsung `tidak_tersedia`). Sumber per nomor: nomor resmi (`sumber = resmi`) memakai token bisnis WABA dari `wa_business_tokens`; lalu API key Dualhook jika ada di `DUALHOOK_API_KEYS`; selain itu Graph API dengan `WHATSAPP_ACCESS_TOKEN`; tanpa keduanya status `gagal` + alasan, dicoba lagi setelah kunci diisi. File dibuka lewat `/api/media/<id>` (cek sesi + RLS, alihkan ke signed URL 1 jam). Batas file 50 MB (batas global Supabase paket gratis).
 - ✅ CS dan supervisor bisa membuka semua lampiran tanpa membuka HP
 
 ## 3. Jalur resmi Tech Provider
@@ -58,22 +58,25 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 👤 Verifikasi bisnis PT Trinitas Delegasi Kreatif (dokumen sesuai alamat, website, konfirmasi lewat telepon/SMS)
 - [ ] 👤 App Review `whatsapp_business_management` dan `whatsapp_business_messaging` (naskah video di `docs/TECH-PROVIDER.md`)
 - [ ] 👤 Facebook Login for Business → Configuration Embedded Signup → catat Configuration ID
-- [ ] 🤖 Sprint 2b: tombol "Tambah nomor" (Embedded Signup + Coexistence), tukar `code` → token, `subscribed_apps`, token tersimpan terenkripsi
-- [ ] 🤖 Sinkronisasi kontak lalu riwayat otomatis (dalam 24 jam), status di UI
-- [ ] 🤖 Pengaturan → Nomor WhatsApp untuk Owner: label, CS pemilik, status
+- [x] 🤖 Sprint 2b: tombol "Tambah nomor" (Embedded Signup + Coexistence), tukar `code` → token, `subscribed_apps`, token tersimpan terenkripsi (kode siap di balik feature flag; aktif setelah env Meta diisi, lihat `docs/TECH-PROVIDER.md` Tahap 4)
+- [x] 🤖 Sinkronisasi kontak lalu riwayat otomatis (dalam 24 jam), status di UI (tombol Coba lagi + cron harian)
+- [x] 🤖 Pengaturan → Nomor WhatsApp untuk Owner: label, CS pemilik, status, sumber koneksi (Dualhook / resmi)
 - [ ] 👤🤖 Pindah nomor Sobatimport dari Dualhook ke jalur resmi (jam sepi), batalkan Dualhook
 - ✅ Owner klien menambah nomor sales sendiri; tidak ada nomor yang bergantung pada Dualhook
 
 ## 4. Pengalaman pengguna (UX)
 **Fokus:** nyaman dipakai CS dan supervisor setiap hari, di laptop maupun HP.
 
-- [ ] 🤖 Tampilan HP: sidebar menjadi menu ringkas/bawah; Inbox, Pipeline, Dashboard enak di layar kecil
-- [ ] 🤖 Filter Inbox lanjutan: CS, stage, iklan tertentu, rentang tanggal
-- [ ] 🤖 Filter Dashboard per nomor WA dan per CS
-- [ ] 🤖 Penanda chat belum dibaca dan notifikasi chat baru di browser
-- [ ] 🤖 Nama iklan dari Meta (tabel `ads`) dipakai di Inbox, Kontak, Pipeline
-- [ ] 🤖 Status kosong, loading, dan pesan error yang jelas di semua halaman
+- [x] 🤖 Tampilan HP: sidebar menjadi menu ringkas/bawah; Inbox, Pipeline, Dashboard enak di layar kecil
+- [x] 🤖 Filter Inbox lanjutan: CS, stage, iklan tertentu, rentang tanggal
+- [x] 🤖 Filter Dashboard per nomor WA dan per CS
+- [x] 🤖 Penanda chat belum dibaca dan notifikasi chat baru di browser
+- [x] 🤖 Nama iklan dari Meta (tabel `ads`) dipakai di Inbox, Kontak, Pipeline
+- [x] 🤖 Status kosong, loading, dan pesan error yang jelas di semua halaman
 - [ ] 👤 Kumpulkan masukan CS dan supervisor Sobatimport tiap minggu
+
+*Catatan jalur 4 (29 Nov 2026):* migrasi `20261128110000_ux_read_state_filters.sql` (tabel `contact_reads`, fungsi `inbox_contacts`, `inbox_summary`, `mark_all_contacts_read`, `workspace_ad_names`, `dashboard_*_v2`; aditif). Filter Inbox ada di URL (`?tab=&cs=&stage=&iklan=&dari=&sampai=&nomor=&q=`); rentang tanggal Inbox = tanggal pesan terakhir (WIB). Filter Dashboard per CS/nomor tidak memecah spend iklan (spend penuh tiap iklan). Nama iklan untuk CS lewat `workspace_ad_names` (security definer, hanya id + nama). Notifikasi browser hanya selama tab Connectiv terbuka (belum ada push/service worker).
+
 - ✅ Supervisor bisa memantau dan CS bisa bekerja penuh dari HP
 
 ## 5. Kesiapan produksi
@@ -82,8 +85,9 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 👤 Project Supabase produksi `connectiv-prod` (Singapore, paket Pro)
 - [ ] 🤖 Migrasi skema ke produksi, pindahkan data pilot, pisahkan env dev/produksi
 - [ ] 👤 Domain `connectiv.delegativ.com` di Vercel; atur Deployment Protection
-- [ ] 🤖 `admin_access_log`: catat setiap akses Super Admin ke workspace klien (PRD §6)
-- [ ] 🤖 Pelacakan error (mis. Sentry) dan alert jika cron, webhook, atau sync iklan gagal
+- [x] 🤖 `admin_access_log`: catat setiap akses Super Admin ke workspace klien (PRD §6); tampil di `/admin/log-akses`
+- [x] 🤖 Alert jika cron, webhook, atau sync iklan gagal: `ops_alerts` + banner di `/admin` + `console.error` terstruktur; email lewat Resend jika `RESEND_API_KEY` dan `ALERT_EMAIL_TO` diisi
+- [ ] 👤 Akun Sentry (atau sejenis) untuk pelacakan error aplikasi, lalu 🤖 pasang SDK-nya
 - [ ] 👤🤖 Backup harian dan uji pemulihan
 - [ ] 👤 Review keamanan oleh developer berpengalaman (PRD §6)
 - [ ] 👤 Perbarui alamat di halaman legal setelah akta perubahan selesai (`lib/company.ts`)
@@ -103,12 +107,12 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 ## 7. Operasional pilot dan metrik
 **Fokus:** membuktikan target pilot (PRD §2.8) untuk keputusan go/no-go.
 
-- [ ] 🤖 Halaman metrik pilot di `/admin`:
+- [x] 🤖 Halaman metrik pilot di `/admin/metrik` (cara hitung dijelaskan di halaman):
   - pesan ter-mirror dibanding chat di HP (≥ 99%)
   - chat yang ditandai Closing atau Lost (≥ 70%)
   - chat CTWA yang terkait ID iklan (≥ 90%)
   - supervisor/owner membuka dashboard (≥ 3x per minggu)
-- [ ] 🤖 Catat kunjungan dashboard per user (untuk metrik di atas)
+- [x] 🤖 Catat kunjungan dashboard per user (untuk metrik di atas): `page_visits`, maksimal sekali per 30 menit
 - [ ] 👤 SOP onboarding klien (versi HP, izinkan riwayat chat, jangan uninstall, buka aplikasi berkala, grup tidak tersinkron)
 - [ ] 👤 Perjanjian pilot + persetujuan pemrosesan data (UU PDP)
 - [ ] 👤 Review mingguan dengan klien pilot; wawancara harga di minggu 5–6
@@ -140,20 +144,33 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 🤖 Pantau query lambat (Supabase Advisors / Query Performance)
 
 **C. Index dan query**
-- [ ] 🤖 Index untuk dashboard: `contacts(workspace_id, dibuat_pada)`, `deals(contact_id, status)`, `messages(contact_id, arah, dikirim_pada)`, `stage_history(ke_stage)`
-- [ ] 🤖 Fungsi RLS dievaluasi sekali per query (pola `(select …)`), bukan per baris
-- [ ] 🤖 Kurangi query berurutan di Inbox, Kontak, detail kontak
-- [ ] 🤖 Ambil profil anggota workspace saja, bukan semua profil yang terlihat
+- [x] 🤖 Index untuk dashboard: `contacts(workspace_id, (dibuat_pada at time zone 'Asia/Jakarta')::date)` (ekspresi yang sama dengan filter kohort), `deals(contact_id, status)`, `messages(contact_id, arah, dikirim_pada) where not dari_history`, `stage_history(ke_stage)`
+- [x] 🤖 Fungsi RLS dievaluasi sekali per query (pola `(select …)`), bukan per baris
+- [x] 🤖 Kurangi query berurutan di Inbox, Kontak, detail kontak
+- [x] 🤖 Ambil profil anggota workspace saja, bukan semua profil yang terlihat
 
 **D. Data yang membesar**
-- [ ] 🤖 Paginasi daftar Inbox dan Kontak; "muat pesan lama" di percakapan
-- [ ] 🤖 Ingest berkelompok (bersama jalur 1)
-- [ ] 🤖 Arsip/hapus data lama (`webhook_events`, `sync_runs`)
+- [x] 🤖 Paginasi daftar Inbox dan Kontak; "muat pesan lama" di percakapan (jalur 4)
+- [x] 🤖 Ingest berkelompok (selesai di jalur 1: `ingest_messages`)
+- [x] 🤖 Arsip/hapus data lama (`webhook_events`, `sync_runs`; selesai di jalur 1: cron harian)
 
 **E. Cache dan pemantauan**
-- [ ] 🤖 Cache data yang jarang berubah (stage, anggota, nomor WA) dengan cache Next.js 16 + invalidasi saat diubah
-- [ ] 🤖 Pantau ukuran database dan jumlah koneksi Realtime
+- [x] 🤖 Cache data yang jarang berubah (stage, anggota, nomor WA) dengan cache Next.js 16 + invalidasi saat diubah
+- [x] 🤖 Pantau ukuran database (kartu "Ukuran database" di `/admin`, fungsi `db_size_report`); jumlah koneksi Realtime dilihat di dashboard Supabase (Realtime → Reports)
 - ✅ Inbox dan Dashboard terbuka < 1 detik untuk workspace dengan puluhan ribu pesan
+
+*Catatan 9B–9E (29 Nov 2026):* diukur dengan `npm run perf:pages` (workspace `sobat-import`: 3.614 kontak, 46.652 pesan; median 5 putaran dari laptop ke database Seoul, ±160 ms per round trip; secret key, jadi biaya RLS belum termasuk; isi `PERF_EMAIL`/`PERF_PASSWORD` akun anggota/Super Admin untuk mengukur dengan RLS). Yang dihitung hanya query database per halaman, berurutan per tahap seperti kodenya.
+
+| Halaman | Sebelum (tahap) | Sesudah (tahap) |
+|---|---|---|
+| Inbox (daftar) | 938–1.048 ms (5) | 441 ms (2) |
+| Percakapan | 986–1.210 ms (6) | 345 ms (2) |
+| Kontak | 1.042–1.127 ms (5) | 566 ms (2) |
+| Detail kontak | 955–1.020 ms (6) | 339 ms (2) |
+| Pipeline | 757–863 ms (4) | 445 ms (2) |
+| Dashboard (30 hari) | 735–757 ms (4) | 378 ms (2) |
+
+Sumber penghematan: `requireWorkspace` membaca profil dan workspace + peran sekaligus (3 tahap → 1), query halaman paralel setelah akses terbukti, dan stage/anggota/label nomor WA dari cache (`lib/workspace-cache.ts`, angka "sesudah" = cache hangat). Dari Vercel `icn1` round trip jauh lebih kecil, jadi angka absolut produksi lebih rendah; biaya RLS (policy baru di migrasi `20261128140000_perf_indexes_rls.sql`) dan index baru baru terlihat setelah migrasi diterapkan, ukur ulang dengan sesi user.
 
 ---
 

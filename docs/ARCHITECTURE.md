@@ -152,7 +152,9 @@ erDiagram
 | `ad_insights_daily` | ad_id, tanggal, spend, impressions, klik, percakapan_dimulai | **unik (ad_id, tanggal)**, upsert |
 | `webhook_events` | id, sumber, payload_mentah (jsonb), ➕signature_valid, diproses (bool), ➕percobaan, error, diterima_pada, ➕diproses_pada | disimpan 90 hari |
 | ➕`sync_runs` | id, jenis, workspace_id, mulai, selesai, status, error | log sinkronisasi untuk Super Admin |
-| ➕`admin_access_log` | id, user_id, workspace_id, aksi, pada | log akses Super Admin (PRD §6) |
+| ➕`admin_access_log` | id, user_id, user_email, workspace_id, workspace_slug, path, aksi (lihat/aksi), pada | log akses Super Admin (PRD §6), ditulis `log_admin_access` (service role) dari `requireWorkspace` |
+| ➕`page_visits` | id, workspace_id, user_id, halaman, pada | kunjungan dashboard untuk metrik pilot, dedupe 30 menit (`log_page_visit`) |
+| ➕`ops_alerts` | id, jenis, judul, detail, jumlah, pertama_pada, terakhir_pada, selesai_pada, email_terkirim | alert cron/webhook/sync iklan, satu terbuka per jenis (`raise_ops_alert`, `resolve_ops_alert`) |
 
 **Keputusan model yang perlu dikonfirmasi:** pipeline berbasis **kontak** (satu kontak = satu kartu). Kontak yang sudah Closing/Lost lalu chat lagi akan **dibuka ulang ke stage "Baru"**, sementara riwayatnya tetap di `deals` dan `stage_history`. Kalau klien pilot banyak repeat order, kita pertimbangkan pipeline berbasis deal sebelum Sprint 4.
 
@@ -174,7 +176,7 @@ erDiagram
 | `ads`, `ad_insights_daily`, dashboard | baca | baca | tidak (MVP) |
 | `webhook_events`, `sync_runs`, `admin_access_log` | — | — | — (hanya Super Admin / service role) |
 
-Super Admin mengakses workspace klien lewat halaman `/admin`, dan setiap akses tercatat di `admin_access_log`.
+Super Admin mengakses workspace klien lewat halaman `/admin`, dan setiap akses tercatat di `admin_access_log` (path dari header `x-connectiv-path` yang diisi `proxy.ts`; Server Action dicatat sebagai `aksi`; ditulis dengan `after()` lewat `lib/activity.ts`). Log hanya bisa dibaca Super Admin (`/admin/log-akses`) dan tidak bisa diubah dari aplikasi. `page_visits` dan `ops_alerts` juga hanya ditulis service role.
 
 ### 5.3 Rahasia (environment variable)
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` (atau secret BSP), `WHATSAPP_ACCESS_TOKEN` (unduh media), `META_ADS_ACCESS_TOKEN` (system user Delegativ dengan akses partner ke ad account klien), `CRON_SECRET`. Divalidasi dengan Zod saat start.

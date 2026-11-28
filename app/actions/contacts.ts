@@ -1,10 +1,11 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireWorkspace } from "@/lib/auth";
 import { ALASAN_LOST } from "@/lib/deals";
 import { createClient } from "@/lib/supabase/server";
+import { workspaceTags } from "@/lib/workspace-cache";
 
 // Aksi kontak dan pipeline. Setiap aksi memeriksa akses sendiri, lalu menulis
 // lewat client sesi user supaya RLS ikut menjaga (CS hanya kontak miliknya).
@@ -124,6 +125,7 @@ export async function renameStage(slug: string, stageId: string, nama: string): 
     .select("id");
   if (error || !data?.length) return { error: "Gagal mengubah nama stage." };
 
+  updateTag(workspaceTags.stages(access.workspace.id));
   refresh();
   return {};
 }
@@ -137,6 +139,7 @@ export async function reorderStages(slug: string, stageIds: string[]): Promise<A
   const { error } = await supabase.rpc("reorder_stages", { ws: access.workspace.id, stage_ids: stageIds });
   if (error) return { error: "Gagal mengurutkan stage." };
 
+  updateTag(workspaceTags.stages(access.workspace.id));
   refresh();
   return {};
 }

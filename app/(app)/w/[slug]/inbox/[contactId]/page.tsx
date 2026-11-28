@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ConversationView } from "@/components/inbox/conversation-view";
-import { CONTACT_COLUMNS, MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "@/components/inbox/types";
+import { CONTACT_COLUMNS, MESSAGE_COLUMNS, MESSAGE_PAGE_SIZE, type InboxContact, type InboxMessage } from "@/components/inbox/types";
+import { ConversationSkeleton } from "@/components/states";
+import { adLabel } from "@/lib/inbox-filters";
+import { requireWorkspace } from "@/lib/auth";
 import { getInboxLookups } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
 import { getMembers, getStages } from "@/lib/workspace-data";
@@ -11,7 +14,7 @@ export const metadata: Metadata = { title: "Percakapan" };
 
 export default function ConversationPage({ params }: PageProps<"/w/[slug]/inbox/[contactId]">) {
   return (
-    <Suspense fallback={<div className="flex-1 bg-background p-6 text-sm text-muted-foreground">Memuat percakapan…</div>}>
+    <Suspense fallback={<ConversationSkeleton />}>
       <Conversation params={params} />
     </Suspense>
   );
@@ -20,41 +23,57 @@ export default function ConversationPage({ params }: PageProps<"/w/[slug]/inbox/
 async function Conversation({ params }: { params: Promise<{ slug: string; contactId: string }> }) {
   const { slug, contactId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(contactId)) notFound();
-  const [{ access, numbers, thresholds }, stages, members] = await Promise.all([
+  const access = await requireWorkspace(slug);
+  const supabase = await createClient();
+
+  // Semua query paralel setelah akses terbukti. RLS: kontak milik CS lain atau
+  // workspace lain tidak terbaca → 404, dan pesannya juga tidak terbaca.
+  const [
+    { numbers, thresholds, adNames },
+    stages,
+    members,
+    { data: contact, error },
+    { data: latest, error: messagesError },
+  ] = await Promise.all([
     getInboxLookups(slug),
     getStages(slug),
     getMembers(slug),
+    supabase
+      .from("contacts")
+      .select(CONTACT_COLUMNS)
+      .eq("id", contactId)
+      .eq("workspace_id", access.workspace.id)
+      .maybeSingle<InboxContact>(),
+    // Halaman pesan terbaru; pesan lama dimuat dari klien ("Muat pesan lama").
+    // Satu baris ekstra untuk tahu apakah masih ada pesan lebih lama.
+    supabase
+      .from("messages")
+      .select(MESSAGE_COLUMNS)
+      .eq("contact_id", contactId)
+      .eq("workspace_id", access.workspace.id)
+      .order("dikirim_pada", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(MESSAGE_PAGE_SIZE + 1)
+      .returns<InboxMessage[]>(),
   ]);
-  const supabase = await createClient();
-
-  // RLS: kontak milik CS lain atau workspace lain tidak terbaca → 404.
-  const { data: contact } = await supabase
-    .from("contacts")
-    .select(CONTACT_COLUMNS)
-    .eq("id", contactId)
-    .eq("workspace_id", access.workspace.id)
-    .maybeSingle<InboxContact>();
+  if (error) throw new Error(`contacts: ${error.message}`);
   if (!contact) notFound();
-
-  // 500 pesan terakhir, ditampilkan urut waktu.
-  const { data: latest } = await supabase
-    .from("messages")
-    .select(MESSAGE_COLUMNS)
-    .eq("contact_id", contact.id)
-    .order("dikirim_pada", { ascending: false })
-    .limit(500)
-    .returns<InboxMessage[]>();
+  if (messagesError) throw new Error(`messages: ${messagesError.message}`);
+  const rows = latest ?? [];
 
   return (
     <ConversationView
       key={contact.id}
       slug={slug}
+      userId={access.user.id}
       initialContact={contact}
-      initialMessages={(latest ?? []).reverse()}
+      initialMessages={rows.slice(0, MESSAGE_PAGE_SIZE).reverse()}
+      initialHasOlder={rows.length > MESSAGE_PAGE_SIZE}
       stages={stages}
       members={members}
       canAssign={access.canManage || access.peran === "supervisor"}
       numberLabel={contact.wa_number_id_terakhir ? (numbers[contact.wa_number_id_terakhir] ?? null) : null}
+      adName={contact.sumber === "ctwa" ? adLabel(contact.ad_id, contact.referral_headline, adNames) : null}
       thresholds={thresholds}
     />
   );

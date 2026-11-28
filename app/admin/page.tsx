@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { signOut } from "@/app/actions/auth";
-import { Brand } from "@/components/brand";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -12,8 +9,11 @@ import type { Peran } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { numberWarnings } from "@/lib/wa-health";
 import { AddNumberForm, type WorkspaceMember } from "./add-number-form";
+import { AdminHeader } from "./admin-header";
+import { OpsAlerts } from "./ops-alerts";
 import { AdAccountRow, AddAdAccountForm, type AdAccountItem } from "./ad-accounts";
 import { CreateWorkspaceForm } from "./create-workspace-form";
+import { DbSizeCard } from "./db-size-card";
 import { ReprocessButton } from "./reprocess-button";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -41,22 +41,13 @@ function formatDateTime(value: string) {
 export default function AdminPage() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 bg-sidebar px-7 py-4">
-        <div className="flex items-center gap-3">
-          <Brand />
-          <span className="rounded-full bg-sidebar-accent px-2.5 py-1 text-xs font-semibold text-white">
-            Admin Delegativ
-          </span>
-        </div>
-        <form action={signOut}>
-          <Button type="submit" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-white">
-            Keluar
-          </Button>
-        </form>
-      </header>
+      <AdminHeader active="/admin" />
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-7">
         <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat…</p>}>
           <AdminContent />
+        </Suspense>
+        <Suspense fallback={null}>
+          <DbSizeCard />
         </Suspense>
       </main>
     </div>
@@ -137,6 +128,8 @@ async function AdminContent() {
 
   return (
     <>
+      <OpsAlerts />
+
       <section aria-labelledby="h-buat" className="rounded-xl border bg-card p-5">
         <h1 id="h-buat" className="text-lg font-bold">
           Buat workspace klien

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/page-header";
+import { SettingsSkeleton } from "@/components/states";
 import { requireWorkspace } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Peran } from "@/lib/types";
@@ -15,7 +17,7 @@ export default function Page({ params }: PageProps<"/w/[slug]/pengaturan">) {
   return (
     <>
       <PageHeader title="Pengaturan" description="Waktu tanggapan, stage pipeline, user, dan peran" />
-      <Suspense fallback={<p className="m-7 text-sm text-muted-foreground">Memuat…</p>}>
+      <Suspense fallback={<SettingsSkeleton />}>
         <MembersSection params={params} />
       </Suspense>
     </>
@@ -53,6 +55,16 @@ async function MembersSection({ params }: { params: Promise<{ slug: string }> })
   return (
     <div className="flex flex-col">
       <div className="mx-7 mt-7 flex max-w-4xl flex-col gap-6">
+        <Link
+          href={`/w/${slug}/pengaturan/nomor-whatsapp`}
+          className="flex items-center justify-between rounded-xl border bg-card p-5 hover:bg-muted/40"
+        >
+          <span className="flex flex-col gap-1">
+            <span className="text-base font-bold">Nomor WhatsApp</span>
+            <span className="text-sm text-muted-foreground">Label nomor, CS pemilik, status, dan tambah nomor</span>
+          </span>
+          <span aria-hidden className="text-primary">→</span>
+        </Link>
         <ThresholdsForm
           slug={slug}
           kuning={access.workspace.batas_kuning_menit}

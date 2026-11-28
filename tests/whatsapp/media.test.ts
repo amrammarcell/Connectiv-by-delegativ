@@ -49,17 +49,32 @@ describe("parseDualhookKeys / createSourceResolver", () => {
     ]);
   });
 
-  it("nomor dengan API key Dualhook memakai Dualhook, lainnya Graph, tanpa kunci = null", () => {
+  it("nomor dengan API key Dualhook memakai Dualhook, lainnya Graph, tanpa kunci = null", async () => {
     const resolve = createSourceResolver({
       DUALHOOK_API_KEYS: "111:dh_live_a",
       WHATSAPP_ACCESS_TOKEN: "tok",
       META_GRAPH_VERSION: "v27.0",
     });
-    expect(resolve("111")).toEqual({ kind: "dualhook", apiKey: "dh_live_a" });
-    expect(resolve("999")).toEqual({ kind: "graph", token: "tok", graphVersion: "v27.0" });
+    expect(await resolve({ phone_number_id: "111" })).toEqual({ kind: "dualhook", apiKey: "dh_live_a" });
+    expect(await resolve({ phone_number_id: "999" })).toEqual({ kind: "graph", token: "tok", graphVersion: "v27.0" });
     const none = createSourceResolver({ DUALHOOK_API_KEYS: "111:dh_live_a", META_GRAPH_VERSION: "v27.0" });
-    expect(none("999")).toBeNull();
-    expect(none(null)).toBeNull();
+    expect(await none({ phone_number_id: "999" })).toBeNull();
+    expect(await none(null)).toBeNull();
+  });
+
+  it("nomor resmi memakai token bisnis WABA-nya (sekali per WABA), jatuh ke kunci lain jika tidak ada", async () => {
+    const lookup = vi.fn(async (waba: string) => (waba === "W1" ? "biz-token" : null));
+    const resolve = createSourceResolver({ META_GRAPH_VERSION: "v27.0", DUALHOOK_API_KEYS: "222:dh_live_b" }, lookup);
+    const resmi = { phone_number_id: "111", waba_id: "W1", sumber: "resmi" };
+    expect(await resolve(resmi)).toEqual({ kind: "graph", token: "biz-token", graphVersion: "v27.0" });
+    expect(await resolve(resmi)).toEqual({ kind: "graph", token: "biz-token", graphVersion: "v27.0" });
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(await resolve({ phone_number_id: "222", waba_id: "W2", sumber: "resmi" })).toEqual({
+      kind: "dualhook",
+      apiKey: "dh_live_b",
+    });
+    // Nomor Dualhook tidak pernah memakai token bisnis.
+    expect(await resolve({ phone_number_id: "333", waba_id: "W1", sumber: "dualhook" })).toBeNull();
   });
 });
 
@@ -174,7 +189,7 @@ type Row = {
   media_mime: string | null;
   nama_file: string | null;
   media_percobaan: number;
-  wa_numbers: { phone_number_id: string } | null;
+  wa_numbers: { phone_number_id: string; waba_id?: string | null; sumber?: string | null } | null;
 };
 
 function fakeAdmin(rows: Row[], options: { uploadError?: string } = {}) {

@@ -1,11 +1,12 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { ensureUser } from "@/lib/accounts";
 import { requireWorkspace } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PERAN, type Peran } from "@/lib/types";
+import { workspaceTags } from "@/lib/workspace-cache";
 
 export type AddMemberState = {
   error?: string;
@@ -41,6 +42,7 @@ export async function addMember(slug: string, _prev: AddMemberState, formData: F
     return { error: error.code === "23505" ? "User ini sudah menjadi anggota workspace." : "Gagal menambah anggota." };
   }
 
+  updateTag(workspaceTags.members(access.workspace.id));
   refresh();
   return { added: { email, tempPassword: account.tempPassword } };
 }
@@ -59,6 +61,7 @@ export async function updateMemberRole(slug: string, userId: string, peran: Pera
   // RLS mengembalikan 0 baris jika tidak diizinkan (misalnya mengubah peran sendiri).
   if (error || !data?.length) return { error: "Gagal mengubah peran." };
 
+  updateTag(workspaceTags.members(access.workspace.id));
   refresh();
   return {};
 }
@@ -76,6 +79,7 @@ export async function removeMember(slug: string, userId: string): Promise<{ erro
     .select("user_id");
   if (error || !data?.length) return { error: "Gagal menghapus anggota." };
 
+  updateTag(workspaceTags.members(access.workspace.id));
   refresh();
   return {};
 }

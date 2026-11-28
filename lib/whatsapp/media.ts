@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { decryptSecret } from "@/lib/crypto";
 
 // Unduh media WhatsApp (gambar, voice note, video, dokumen, stiker) ke bucket
 // Storage privat `media`. Media id dari Meta kedaluwarsa ±7 hari, jadi
@@ -7,7 +8,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 //
 // Dua sumber di balik satu antarmuka:
 // - Dualhook: Runtime API (https://api.dualhook.com), API key per koneksi.
-// - App Meta sendiri / Tech Provider: Graph API dengan token system user.
+// - Nomor resmi (Tech Provider, wa_numbers.sumber = 'resmi'): Graph API dengan
+//   token bisnis per WABA (wa_business_tokens, terenkripsi).
+// - Nomor lain: Graph API dengan token system user (WHATSAPP_ACCESS_TOKEN).
 
 export const MEDIA_BUCKET = "media";
 // Batas ukuran file global Supabase paket gratis.
@@ -55,9 +58,21 @@ export function parseDualhookKeys(raw: string | undefined): Map<string, string> 
   return keys;
 }
 
-export function createSourceResolver(env: MediaEnvValues) {
+export type NumberInfo = { phone_number_id: string; waba_id?: string | null; sumber?: string | null };
+
+// Token bisnis per WABA untuk nomor resmi; null = tidak ada.
+export type BusinessTokenLookup = (wabaId: string) => Promise<string | null>;
+
+export function createSourceResolver(env: MediaEnvValues, businessToken?: BusinessTokenLookup) {
   const dualhook = parseDualhookKeys(env.DUALHOOK_API_KEYS);
-  return (phoneNumberId: string | null | undefined): MediaSource | null => {
+  const tokens = new Map<string, Promise<string | null>>();
+  return async (number: NumberInfo | null | undefined): Promise<MediaSource | null> => {
+    if (number?.sumber === "resmi" && number.waba_id && businessToken) {
+      if (!tokens.has(number.waba_id)) tokens.set(number.waba_id, businessToken(number.waba_id).catch(() => null));
+      const token = await tokens.get(number.waba_id)!;
+      if (token) return { kind: "graph", token, graphVersion: env.META_GRAPH_VERSION };
+    }
+    const phoneNumberId = number?.phone_number_id;
     const apiKey = phoneNumberId ? dualhook.get(phoneNumberId) : undefined;
     if (apiKey) return { kind: "dualhook", apiKey };
     if (env.WHATSAPP_ACCESS_TOKEN) {
@@ -207,7 +222,7 @@ type PendingRow = {
   media_mime: string | null;
   nama_file: string | null;
   media_percobaan: number;
-  wa_numbers: { phone_number_id: string } | null;
+  wa_numbers: NumberInfo | null;
 };
 
 export type MediaRunResult = {
@@ -236,6 +251,8 @@ export const MISSING_KEY_ERROR = "Kunci akses media belum diisi untuk nomor ini"
 
 export type DownloadOptions = {
   env: MediaEnvValues;
+  // Token bisnis nomor resmi (lihat supabaseBusinessTokens).
+  businessToken?: BusinessTokenLookup;
   // Batasi ke pesan tertentu (dari satu webhook). Kosong = semua yang tertunda.
   waMessageIds?: string[];
   limit?: number;
@@ -251,6 +268,7 @@ export type DownloadOptions = {
 export async function downloadPendingMedia(admin: SupabaseClient, options: DownloadOptions): Promise<MediaRunResult> {
   const {
     env,
+    businessToken,
     waMessageIds,
     limit = 200,
     deadline = Number.POSITIVE_INFINITY,
@@ -280,7 +298,7 @@ export async function downloadPendingMedia(admin: SupabaseClient, options: Downl
 
   let query = admin
     .from("messages")
-    .select("id, workspace_id, media_id, media_mime, nama_file, media_percobaan, wa_numbers(phone_number_id)")
+    .select("id, workspace_id, media_id, media_mime, nama_file, media_percobaan, wa_numbers(phone_number_id, waba_id, sumber)")
     .not("media_id", "is", null)
     .is("media_path", null)
     .or(PENDING_STATUS)
@@ -291,7 +309,7 @@ export async function downloadPendingMedia(admin: SupabaseClient, options: Downl
   const { data, error } = await query.returns<PendingRow[]>();
   if (error) throw new Error(`messages (media tertunda): ${error.message}`);
 
-  const resolve = createSourceResolver(env);
+  const resolve = createSourceResolver(env, businessToken);
   const rows = [...(data ?? [])];
 
   const worker = async () => {
@@ -300,7 +318,7 @@ export async function downloadPendingMedia(admin: SupabaseClient, options: Downl
         result.timedOut = true;
         return;
       }
-      await downloadOne(admin, row, resolve(row.wa_numbers?.phone_number_id), fetchImpl, result);
+      await downloadOne(admin, row, await resolve(row.wa_numbers), fetchImpl, result);
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
@@ -379,4 +397,18 @@ export async function attachMediaDetails(admin: SupabaseClient, items: MediaDeta
   const { data, error } = await admin.rpc("attach_media_details", { p_items: items });
   if (error) throw new Error(`attach_media_details: ${error.message}`);
   return (data as number) ?? 0;
+}
+
+// Token bisnis per WABA dari wa_business_tokens (jalur resmi), didekripsi
+// dengan WHATSAPP_TOKEN_ENCRYPTION_KEY. Hanya untuk client secret key.
+export function supabaseBusinessTokens(admin: SupabaseClient, encryptionKey: string): BusinessTokenLookup {
+  return async (wabaId) => {
+    const { data, error } = await admin
+      .from("wa_business_tokens")
+      .select("token_terenkripsi")
+      .eq("waba_id", wabaId)
+      .maybeSingle<{ token_terenkripsi: string }>();
+    if (error || !data?.token_terenkripsi) return null;
+    return decryptSecret(data.token_terenkripsi, encryptionKey);
+  };
 }

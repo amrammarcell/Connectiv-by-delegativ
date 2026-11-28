@@ -8,7 +8,10 @@ import { ContactNotes, type Note } from "@/components/contacts/contact-notes";
 import { DealButtons } from "@/components/deals/deal-dialog";
 import { CONTACT_COLUMNS, type InboxContact } from "@/components/inbox/types";
 import { ALASAN_LABEL, DEAL_COLUMNS, formatRupiah, type Deal } from "@/lib/deals";
+import { SettingsSkeleton } from "@/components/states";
 import { formatDateTime, formatPhone } from "@/lib/format";
+import { adLabel } from "@/lib/inbox-filters";
+import { requireWorkspace } from "@/lib/auth";
 import { getInboxLookups } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
 import { getMembers, getStages } from "@/lib/workspace-data";
@@ -17,7 +20,7 @@ export const metadata: Metadata = { title: "Detail kontak" };
 
 export default function Page({ params }: PageProps<"/w/[slug]/kontak/[contactId]">) {
   return (
-    <Suspense fallback={<p className="m-7 text-sm text-muted-foreground">Memuat kontak…</p>}>
+    <Suspense fallback={<SettingsSkeleton />}>
       <ContactDetail params={params} />
     </Suspense>
   );
@@ -26,49 +29,63 @@ export default function Page({ params }: PageProps<"/w/[slug]/kontak/[contactId]
 async function ContactDetail({ params }: { params: Promise<{ slug: string; contactId: string }> }) {
   const { slug, contactId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(contactId)) notFound();
-  const [{ access, stages: stageNames, people, numbers }, stages, members] = await Promise.all([
+  const access = await requireWorkspace(slug);
+  const supabase = await createClient();
+  const ws = access.workspace.id;
+
+  // Semua query paralel setelah akses terbukti. Catatan, riwayat, dan deal
+  // memakai RLS "kontak yang terlihat", jadi kosong jika kontaknya tidak
+  // terbaca; halaman tetap 404 di bawah.
+  const [
+    { stages: stageNames, people, numbers, adNames },
+    stages,
+    members,
+    { data: contact, error },
+    { data: notes },
+    { data: history },
+    { data: deals },
+  ] = await Promise.all([
     getInboxLookups(slug),
     getStages(slug),
     getMembers(slug),
-  ]);
-  const supabase = await createClient();
-
-  const { data: contact } = await supabase
-    .from("contacts")
-    .select(`${CONTACT_COLUMNS}, ctwa_clid, referral_source_url, referral_pada, dibuat_pada`)
-    .eq("id", contactId)
-    .eq("workspace_id", access.workspace.id)
-    .maybeSingle<InboxContact & { ctwa_clid: string | null; referral_source_url: string | null; referral_pada: string | null; dibuat_pada: string }>();
-  if (!contact) notFound();
-
-  const [{ data: notes }, { data: history }, { data: deals }] = await Promise.all([
+    supabase
+      .from("contacts")
+      .select(`${CONTACT_COLUMNS}, ctwa_clid, referral_source_url, referral_pada, dibuat_pada`)
+      .eq("id", contactId)
+      .eq("workspace_id", ws)
+      .maybeSingle<InboxContact & { ctwa_clid: string | null; referral_source_url: string | null; referral_pada: string | null; dibuat_pada: string }>(),
     supabase
       .from("contact_notes")
       .select("id, isi, pada, oleh_user")
-      .eq("contact_id", contact.id)
+      .eq("contact_id", contactId)
+      .eq("workspace_id", ws)
       .order("pada", { ascending: false })
       .returns<Note[]>(),
     supabase
       .from("stage_history")
       .select("id, dari_stage, ke_stage, oleh_user, pada")
-      .eq("contact_id", contact.id)
+      .eq("contact_id", contactId)
+      .eq("workspace_id", ws)
       .order("pada", { ascending: false })
       .limit(50)
       .returns<{ id: string; dari_stage: string | null; ke_stage: string | null; oleh_user: string | null; pada: string }[]>(),
     supabase
       .from("deals")
       .select(DEAL_COLUMNS)
-      .eq("contact_id", contact.id)
+      .eq("contact_id", contactId)
+      .eq("workspace_id", ws)
       .order("pada", { ascending: false })
       .returns<Deal[]>(),
   ]);
+  if (error) throw new Error(`contacts: ${error.message}`);
+  if (!contact) notFound();
 
   const canAssign = access.canManage || access.peran === "supervisor";
   const name = contact.nama ?? formatPhone(contact.nomor_hp);
 
   return (
     <div className="flex flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-4 sm:px-7">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-card px-3 py-3 sm:px-7 sm:py-4">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href={`/w/${slug}/kontak`}
@@ -78,7 +95,7 @@ async function ContactDetail({ params }: { params: Promise<{ slug: string; conta
             <ArrowLeft aria-hidden className="size-5" />
           </Link>
           <div className="min-w-0">
-            <h1 className="truncate text-[22px] font-bold tracking-tight">{name}</h1>
+            <h1 className="truncate text-lg font-bold tracking-tight sm:text-[22px]">{name}</h1>
             <p className="text-[13px] text-muted-foreground">
               {formatPhone(contact.nomor_hp)}
               {contact.wa_number_id_terakhir && numbers[contact.wa_number_id_terakhir]
@@ -96,7 +113,7 @@ async function ContactDetail({ params }: { params: Promise<{ slug: string; conta
         </Link>
       </header>
 
-      <div className="grid gap-5 p-4 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      <div className="grid gap-4 p-3 sm:gap-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <div className="flex flex-col gap-5">
           <section aria-labelledby="h-status" className="flex flex-col gap-4 rounded-xl border bg-card p-5">
             <h2 id="h-status" className="text-base font-bold">
@@ -161,7 +178,7 @@ async function ContactDetail({ params }: { params: Promise<{ slug: string; conta
               </h2>
               {contact.sumber === "ctwa" ? (
                 <>
-                  <span className="text-sm font-semibold">{contact.referral_headline ?? "Iklan tanpa judul"}</span>
+                  <span className="text-sm font-semibold">{adLabel(contact.ad_id, contact.referral_headline, adNames)}</span>
                   <span className="text-xs break-all text-muted-foreground">
                     ID iklan {contact.ad_id}
                     {contact.ctwa_clid ? " · ctwa_clid tercatat" : ""}

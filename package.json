@@ -15,7 +15,8 @@
     "webhook:tokens": "node scripts/webhook-tokens.mts",
     "webhook:latest": "node --env-file=.env.local scripts/webhook-latest.mts",
     "webhook:reprocess": "tsx --env-file=.env.local scripts/webhook-reprocess.mts",
-    "webhook:backfill-edits": "tsx --env-file=.env.local scripts/webhook-backfill-edits.mts"
+    "webhook:backfill-edits": "tsx --env-file=.env.local scripts/webhook-backfill-edits.mts",
+    "perf:pages": "tsx --env-file=.env.local scripts/perf-pages.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -1,7 +1,9 @@
 import { after } from "next/server";
-import { mediaEnv, whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
+import { checkWebhookHealth } from "@/lib/alerts";
+import { defaultNotifier } from "@/lib/alerts-notifier";
+import { mediaEnv, techProviderEnv, whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { downloadPendingMedia } from "@/lib/whatsapp/media";
+import { downloadPendingMedia, supabaseBusinessTokens } from "@/lib/whatsapp/media";
 import { processWebhookEvent } from "@/lib/whatsapp/processor";
 import { firstField, parseEnvelope, resolveWebhookSource, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
 
@@ -90,18 +92,26 @@ export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/wh
   // Kegagalan tercatat di webhook_events dan bisa diulang (npm run webhook:reprocess).
   after(async () => {
     const startedAt = Date.now();
+    let healthCheck = false;
     let mediaMessageIds: string[] = [];
     try {
-      mediaMessageIds = (await processWebhookEvent(admin, event.id)).mediaMessageIds;
+      const result = await processWebhookEvent(admin, event.id);
+      healthCheck = result.unknownNumbers.length > 0;
+      mediaMessageIds = result.mediaMessageIds;
     } catch (err) {
       console.error("webhook processing failed", event.id, err instanceof Error ? err.message : err);
+      healthCheck = true;
     }
+    // Event gagal/tertunda: buka alert (sekali per kejadian, lib/alerts.ts).
+    if (healthCheck) await checkWebhookHealth(admin, defaultNotifier()).catch(() => {});
     // Unduh media pesan ini segera (media id kedaluwarsa ±7 hari). Yang gagal
     // atau tidak sempat diulang oleh cron harian.
     if (mediaMessageIds.length) {
       try {
+        const tp = techProviderEnv();
         await downloadPendingMedia(admin, {
           env: mediaEnv(),
+          businessToken: tp ? supabaseBusinessTokens(admin, tp.WHATSAPP_TOKEN_ENCRYPTION_KEY) : undefined,
           waMessageIds: mediaMessageIds,
           deadline: startedAt + 240_000,
         });

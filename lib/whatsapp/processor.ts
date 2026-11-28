@@ -170,21 +170,51 @@ export function numberStatusFromEvent(event: string): "aktif" | "terputus" | nul
 
 const onlyDigits = (v: string | null) => v?.replace(/\D/g, "") ?? "";
 
+// Konteks event: sumber webhook (URL app Meta kita atau Dualhook) dan waktu
+// diterima. Dipakai saat nomor pindah dari Dualhook ke jalur resmi.
+export type AccountUpdateContext = { sumber?: string | null; receivedAt?: string | Date | null };
+
+type NumberForUpdate = { id: string; nomor_tampil: string | null; sumber?: string | null; resmi_sejak?: string | null };
+
+// Event dari Dualhook tidak pernah mengubah nomor yang sudah tersambung lewat
+// jalur resmi (mis. PARTNER_REMOVED saat langganan Dualhook dibatalkan
+// setelah nomor dipindah). Event pemutusan yang diterima sebelum nomor
+// disambungkan ulang lewat jalur resmi juga milik koneksi lama.
+export function accountUpdateApplies(
+  n: Pick<NumberForUpdate, "sumber" | "resmi_sejak">,
+  status: "aktif" | "terputus",
+  ctx: AccountUpdateContext = {},
+): boolean {
+  if (n.sumber !== "resmi") return true;
+  if (ctx.sumber === "dualhook") return false;
+  if (status === "terputus" && n.resmi_sejak && ctx.receivedAt) {
+    return new Date(ctx.receivedAt).getTime() >= new Date(n.resmi_sejak).getTime();
+  }
+  return true;
+}
+
 // Menandai wa_numbers sesuai event. Event tingkat WABA (PARTNER_REMOVED)
 // mengenai semua nomor di WABA itu; event yang membawa phone_number hanya
 // nomor tersebut. Mengembalikan jumlah nomor yang berubah.
-export async function applyAccountUpdates(admin: SupabaseClient, updates: AccountUpdate[]): Promise<number> {
+export async function applyAccountUpdates(
+  admin: SupabaseClient,
+  updates: AccountUpdate[],
+  ctx: AccountUpdateContext = {},
+): Promise<number> {
   let changed = 0;
   for (const u of updates) {
     const status = numberStatusFromEvent(u.event);
     if (!status || (!u.wabaId && !u.phoneNumber)) continue;
-    let query = admin.from("wa_numbers").select("id, nomor_tampil");
+    // select("*"): sumber/resmi_sejak baru ada setelah migrasi Tech Provider;
+    // tanpa kolom itu semua nomor dianggap Dualhook (perilaku lama).
+    let query = admin.from("wa_numbers").select("*");
     if (u.wabaId) query = query.eq("waba_id", u.wabaId);
     const { data, error } = await query;
     if (error) throw new Error(`wa_numbers: ${error.message}`);
-    const ids = (data ?? [])
+    const ids = ((data ?? []) as NumberForUpdate[])
       .filter((n) => !u.phoneNumber || onlyDigits(n.nomor_tampil) === u.phoneNumber)
-      .map((n) => n.id as string);
+      .filter((n) => accountUpdateApplies(n, status, ctx))
+      .map((n) => n.id);
     if (!ids.length) continue;
     const { error: updateError } = await admin
       .from("wa_numbers")
@@ -237,7 +267,7 @@ async function attachMedia(admin: SupabaseClient, messages: NormalizedMessage[])
 export async function processWebhookEvent(admin: SupabaseClient, eventId: string): Promise<ProcessResult> {
   const { data: event, error } = await admin
     .from("webhook_events")
-    .select("id, payload_mentah, percobaan, signature_valid, diproses")
+    .select("id, sumber, diterima_pada, payload_mentah, percobaan, signature_valid, diproses")
     .eq("id", eventId)
     .single();
   if (error || !event) throw new Error(`webhook_events ${eventId} tidak ditemukan`);
@@ -251,7 +281,10 @@ export async function processWebhookEvent(admin: SupabaseClient, eventId: string
 
     const normalized = normalize(envelope);
     addBatchResult(result, await ingestAll(admin, normalized.messages, normalized.updates));
-    result.numbersChanged = await applyAccountUpdates(admin, normalized.accountUpdates);
+    result.numbersChanged = await applyAccountUpdates(admin, normalized.accountUpdates, {
+      sumber: event.sumber,
+      receivedAt: event.diterima_pada,
+    });
     result.mediaMessageIds = await attachMedia(admin, normalized.messages);
 
     // Nomor yang belum didaftarkan: biarkan belum diproses supaya bisa diulang
