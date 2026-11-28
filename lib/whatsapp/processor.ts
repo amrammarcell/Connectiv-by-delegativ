@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalize, type AccountUpdate, type NormalizedMessage, type NormalizedUpdate } from "./adapter";
+import { attachMediaDetails } from "./media";
 import { parseEnvelope } from "./webhook";
 
 // Processor: webhook_events (mentah) → kontak + pesan lewat fungsi SQL
@@ -203,7 +204,35 @@ export async function applyAccountUpdates(admin: SupabaseClient, updates: Accoun
 // Event webhook
 // ---------------------------------------------------------------------------
 
-export type ProcessResult = BatchResult & { numbersChanged: number };
+export type ProcessResult = BatchResult & {
+  numbersChanged: number;
+  // wa_message_id pesan bermedia di event ini, untuk diunduh setelahnya.
+  mediaMessageIds: string[];
+};
+
+// Detail media untuk pesan yang sudah tersimpan tanpa media (riwayat chat:
+// media_placeholder lalu detailnya menyusul). Kegagalan di sini tidak boleh
+// menggagalkan ingest: pesan tetap tersimpan, medianya saja yang belum.
+async function attachMedia(admin: SupabaseClient, messages: NormalizedMessage[]): Promise<string[]> {
+  const withMedia = messages.filter((m) => m.media);
+  if (!withMedia.length) return [];
+  try {
+    await attachMediaDetails(
+      admin,
+      withMedia.map((m) => ({
+        wa_message_id: m.waMessageId,
+        tipe: m.type,
+        media_id: m.media!.id,
+        media_mime: m.media!.mime,
+        nama_file: m.media!.filename,
+        isi: m.text,
+      })),
+    );
+  } catch (err) {
+    console.error("attach_media_details failed", err instanceof Error ? err.message : err);
+  }
+  return withMedia.map((m) => m.waMessageId);
+}
 
 export async function processWebhookEvent(admin: SupabaseClient, eventId: string): Promise<ProcessResult> {
   const { data: event, error } = await admin
@@ -213,7 +242,7 @@ export async function processWebhookEvent(admin: SupabaseClient, eventId: string
     .single();
   if (error || !event) throw new Error(`webhook_events ${eventId} tidak ditemukan`);
 
-  const result: ProcessResult = { ...emptyBatchResult(), numbersChanged: 0 };
+  const result: ProcessResult = { ...emptyBatchResult(), numbersChanged: 0, mediaMessageIds: [] };
   if (event.diproses || event.signature_valid === false) return result;
 
   try {
@@ -223,6 +252,7 @@ export async function processWebhookEvent(admin: SupabaseClient, eventId: string
     const normalized = normalize(envelope);
     addBatchResult(result, await ingestAll(admin, normalized.messages, normalized.updates));
     result.numbersChanged = await applyAccountUpdates(admin, normalized.accountUpdates);
+    result.mediaMessageIds = await attachMedia(admin, normalized.messages);
 
     // Nomor yang belum didaftarkan: biarkan belum diproses supaya bisa diulang
     // setelah Super Admin menambahkan nomornya.

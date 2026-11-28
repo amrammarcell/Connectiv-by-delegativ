@@ -63,3 +63,28 @@ export function metaAdsEnv(): MetaAdsEnv {
     CRON_SECRET: process.env.CRON_SECRET || undefined,
   });
 }
+
+// Unduh media WhatsApp. Semua opsional: nomor tanpa kunci akses media
+// ditandai "belum bisa diunduh" dan dicoba lagi oleh cron harian.
+const mediaSchema = z.object({
+  // Token system user app Meta sendiri (Tech Provider) dengan izin
+  // whatsapp_business_messaging. Dipakai untuk nomor yang tidak lewat Dualhook.
+  WHATSAPP_ACCESS_TOKEN: z.string().min(1).optional(),
+  // API key Runtime API Dualhook, satu per koneksi (nomor):
+  // "<phone_number_id>:dh_live_...,<phone_number_id>:dh_live_...".
+  DUALHOOK_API_KEYS: z
+    .string()
+    .regex(/^\s*\d+\s*:\s*\S+\s*(,\s*\d+\s*:\s*\S+\s*)*$/, "format: <phone_number_id>:<api_key>,...")
+    .optional(),
+  META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v27.0"),
+});
+
+export type MediaEnv = z.infer<typeof mediaSchema>;
+
+export function mediaEnv(): MediaEnv {
+  return parseEnv(mediaSchema, {
+    WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN || undefined,
+    DUALHOOK_API_KEYS: process.env.DUALHOOK_API_KEYS || undefined,
+    META_GRAPH_VERSION: process.env.META_GRAPH_VERSION || undefined,
+  });
+}

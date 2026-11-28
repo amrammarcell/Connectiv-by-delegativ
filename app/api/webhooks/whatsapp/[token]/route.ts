@@ -1,6 +1,7 @@
 import { after } from "next/server";
-import { whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
+import { mediaEnv, whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { downloadPendingMedia } from "@/lib/whatsapp/media";
 import { processWebhookEvent } from "@/lib/whatsapp/processor";
 import { firstField, parseEnvelope, resolveWebhookSource, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
 
@@ -88,10 +89,25 @@ export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/wh
   // Proses menjadi kontak + pesan setelah membalas, supaya Meta tidak menunggu.
   // Kegagalan tercatat di webhook_events dan bisa diulang (npm run webhook:reprocess).
   after(async () => {
+    const startedAt = Date.now();
+    let mediaMessageIds: string[] = [];
     try {
-      await processWebhookEvent(admin, event.id);
+      mediaMessageIds = (await processWebhookEvent(admin, event.id)).mediaMessageIds;
     } catch (err) {
       console.error("webhook processing failed", event.id, err instanceof Error ? err.message : err);
+    }
+    // Unduh media pesan ini segera (media id kedaluwarsa ±7 hari). Yang gagal
+    // atau tidak sempat diulang oleh cron harian.
+    if (mediaMessageIds.length) {
+      try {
+        await downloadPendingMedia(admin, {
+          env: mediaEnv(),
+          waMessageIds: mediaMessageIds,
+          deadline: startedAt + 240_000,
+        });
+      } catch (err) {
+        console.error("media download failed", event.id, err instanceof Error ? err.message : err);
+      }
     }
   });
 

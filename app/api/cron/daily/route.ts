@@ -1,4 +1,5 @@
-import { metaAdsEnv } from "@/lib/env.server";
+import { mediaEnv, metaAdsEnv } from "@/lib/env.server";
+import { downloadPendingMedia } from "@/lib/whatsapp/media";
 import { syncAllAdAccounts } from "@/lib/meta-ads/sync";
 import { purgeOldRecords } from "@/lib/retention";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,6 +22,9 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   // Sisakan waktu untuk sync iklan dan retensi.
   const webhooks = await processPendingEvents(admin, { deadline: startedAt + 150_000 });
+  // Media yang gagal / belum sempat diunduh saat webhook masuk.
+  const media = await (async () =>
+    downloadPendingMedia(admin, { env: mediaEnv(), limit: 500, deadline: startedAt + 200_000 }))().catch((err: unknown) => ({ error: err instanceof Error ? err.message : String(err) }));
   const ads = env.META_ADS_ACCESS_TOKEN
     ? await syncAllAdAccounts(admin, env.META_ADS_ACCESS_TOKEN, { graphVersion: env.META_GRAPH_VERSION })
     : "META_ADS_ACCESS_TOKEN belum diisi";
@@ -28,5 +32,5 @@ export async function GET(request: Request) {
     error: err instanceof Error ? err.message : String(err),
   }));
 
-  return Response.json({ webhooks, ads, retention });
+  return Response.json({ webhooks, media, ads, retention });
 }
