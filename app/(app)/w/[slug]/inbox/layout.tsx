@@ -1,23 +1,21 @@
 import { Suspense } from "react";
-import { Eye } from "lucide-react";
-import { InboxList } from "@/components/inbox/inbox-list";
-import { CONTACT_COLUMNS, type InboxContact } from "@/components/inbox/types";
-import { PageHeader } from "@/components/page-header";
+import { InboxHeader } from "@/components/inbox/inbox-header";
+import { InboxList, type InboxRow, type InboxSummary } from "@/components/inbox/inbox-list";
+import { INBOX_PAGE_SIZE } from "@/components/inbox/types";
+import { InboxShellSkeleton } from "@/components/states";
+import { EMPTY_FILTERS, inboxRpcArgs } from "@/lib/inbox-filters";
 import { requireWorkspace } from "@/lib/auth";
 import { getInboxLookups } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
+import { getMembers, getStages } from "@/lib/workspace-data";
 
 export default function InboxLayout({ children, params }: LayoutProps<"/w/[slug]/inbox">) {
   return (
     <>
-      <PageHeader title="Inbox">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
-          <Eye aria-hidden className="size-3.5" />
-          Mirroring · hanya baca
-        </span>
-      </PageHeader>
-      <div className="flex min-h-0 flex-1 md:h-[calc(100dvh-77px)]">
-        <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Memuat percakapan…</p>}>
+      <InboxHeader />
+      {/* HP: mengisi sisa layar di antara bar atas dan menu bawah. Laptop: setinggi layar dikurangi header. */}
+      <div className="flex min-h-0 flex-1 md:h-[calc(100dvh-77px)] md:flex-none">
+        <Suspense fallback={<InboxShellSkeleton />}>
           <InboxListLoader params={params} />
         </Suspense>
         {children}
@@ -30,24 +28,32 @@ async function InboxListLoader({ params }: { params: Promise<{ slug: string }> }
   const { slug } = await params;
   const access = await requireWorkspace(slug);
   const supabase = await createClient();
-  const [{ numbers, thresholds }, { data }] = await Promise.all([
+  // Semua query paralel setelah akses terbukti. Halaman pertama tanpa filter;
+  // filter dari URL dimuat oleh klien (layout tidak menerima searchParams).
+  const [{ numbers, adNames, adIds, thresholds }, stages, members, page, summary] = await Promise.all([
     getInboxLookups(slug),
-    supabase
-      .from("contacts")
-      .select(CONTACT_COLUMNS)
-      .eq("workspace_id", access.workspace.id)
-      .not("pesan_terakhir_pada", "is", null)
-      .order("pesan_terakhir_pada", { ascending: false })
-      .limit(300)
-      .returns<InboxContact[]>(),
+    getStages(slug),
+    getMembers(slug),
+    supabase.rpc("inbox_contacts", inboxRpcArgs(access.workspace.id, EMPTY_FILTERS, null, INBOX_PAGE_SIZE)),
+    supabase.rpc("inbox_summary", { ws: access.workspace.id }),
   ]);
+  if (page.error) throw new Error(`inbox_contacts: ${page.error.message}`);
+  const s = (summary.data as InboxSummary[] | null)?.[0];
+  const canFilterByCs = access.canManage || access.peran === "supervisor";
 
   return (
     <InboxList
       slug={slug}
       workspaceId={access.workspace.id}
-      initialContacts={data ?? []}
+      initialContacts={(page.data ?? []) as InboxRow[]}
+      initialSummary={
+        s ? { total: Number(s.total), menunggu: Number(s.menunggu), iklan: Number(s.iklan), belum_dibaca: Number(s.belum_dibaca) } : null
+      }
       numbers={numbers}
+      stages={stages.map((st) => ({ id: st.id, nama: st.nama }))}
+      members={canFilterByCs ? members : []}
+      adNames={adNames}
+      adIds={adIds}
       thresholds={thresholds}
     />
   );

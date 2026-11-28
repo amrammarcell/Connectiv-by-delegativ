@@ -25,6 +25,14 @@ for (const key of [
   }
 }
 
+// Kunci AES-256-GCM token bisnis jalur resmi: 32 byte base64.
+if (has("WHATSAPP_TOKEN_ENCRYPTION_KEY")) {
+  console.log("WHATSAPP_TOKEN_ENCRYPTION_KEY sudah ada, tidak diubah.");
+} else {
+  lines.push(`WHATSAPP_TOKEN_ENCRYPTION_KEY=${randomBytes(32).toString("base64")}`);
+  console.log("WHATSAPP_TOKEN_ENCRYPTION_KEY dibuat.");
+}
+
 if (lines.length) {
   appendFileSync(FILE, `${current.endsWith("\n") || !current ? "" : "\n"}\n# Webhook WhatsApp\n${lines.join("\n")}\n`);
 }

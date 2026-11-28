@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Ban, FileText, Image as ImageIcon, Megaphone, Mic, Paperclip, Smartphone, Video } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Ban, FileText, History, Image as ImageIcon, Megaphone, Mic, Paperclip, Smartphone, Video } from "lucide-react";
 import { useNow } from "@/hooks/use-now";
 import { formatClock, formatDayLabel, formatPhone, initials, isSameDay } from "@/lib/format";
 import { responseStatus, type Thresholds } from "@/lib/response-time";
+import { createClient } from "@/lib/supabase/client";
 import { subscribeWithAuth } from "@/lib/supabase/realtime";
 import { cn } from "@/lib/utils";
 import { AssignSelect, StageSelect } from "@/components/contacts/contact-controls";
 import { DealButtons } from "@/components/deals/deal-dialog";
 import type { Member, Stage } from "@/lib/workspace-data";
 import { ResponseBadge } from "./response-badge";
-import { MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "./types";
+import { MESSAGE_COLUMNS, MESSAGE_PAGE_SIZE, type InboxContact, type InboxMessage } from "./types";
 
 const MEDIA_ICON: Record<string, typeof ImageIcon> = {
   image: ImageIcon,
@@ -32,27 +34,98 @@ const MEDIA_LABEL: Record<string, string> = {
 
 export function ConversationView({
   slug,
+  userId,
   initialContact,
   initialMessages,
+  initialHasOlder,
   stages,
   members,
   canAssign,
   numberLabel,
+  adName,
   thresholds,
 }: {
   slug: string;
+  userId: string;
   initialContact: InboxContact;
   initialMessages: InboxMessage[];
+  initialHasOlder: boolean;
   stages: Stage[];
   members: Member[];
   canAssign: boolean;
   numberLabel: string | null;
+  // Nama iklan (Meta → headline referral → id); null untuk organik.
+  adName: string | null;
   thresholds: Thresholds;
 }) {
   const [contact, setContact] = useState(initialContact);
   const [messages, setMessages] = useState(initialMessages);
+  const [hasOlder, setHasOlder] = useState(initialHasOlder);
+  const [olderState, setOlderState] = useState<"idle" | "loading" | "error">("idle");
   const now = useNow();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Tinggi isi sebelum pesan lama disisipkan, untuk menjaga posisi gulir.
+  const prependFrom = useRef<number | null>(null);
+  const searchParams = useSearchParams();
+  const listQuery = searchParams.size ? `?${searchParams.toString()}` : "";
+  const supabase = useMemo(() => createClient(), []);
+
+  // Catat "sudah dibaca" saat percakapan dibuka, saat pesan masuk baru
+  // diterima sementara tab terlihat, dan saat tab kembali terlihat.
+  const lastIncoming = [...messages].reverse().find((m) => m.arah === "masuk")?.dikirim_pada ?? null;
+  useEffect(() => {
+    const markRead = () => {
+      if (document.visibilityState !== "visible") return;
+      // Query builder Supabase baru dikirim saat di-then/await.
+      supabase
+        .from("contact_reads")
+        .upsert({ user_id: userId, contact_id: initialContact.id, workspace_id: initialContact.workspace_id, dibaca_pada: new Date().toISOString() })
+        .then(({ error }) => {
+          if (error) console.error("contact_reads", error.message);
+        });
+    };
+    markRead();
+    document.addEventListener("visibilitychange", markRead);
+    return () => document.removeEventListener("visibilitychange", markRead);
+  }, [supabase, userId, initialContact.id, initialContact.workspace_id, lastIncoming]);
+
+  async function loadOlder() {
+    const first = messages[0];
+    if (!first || olderState === "loading") return;
+    setOlderState("loading");
+    const { data, error } = await supabase
+      .from("messages")
+      .select(MESSAGE_COLUMNS)
+      .eq("contact_id", initialContact.id)
+      // Kursor (waktu, id): pesan riwayat bisa punya waktu kirim yang sama.
+      .or(`dikirim_pada.lt."${first.dikirim_pada}",and(dikirim_pada.eq."${first.dikirim_pada}",id.lt.${first.id})`)
+      .order("dikirim_pada", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(MESSAGE_PAGE_SIZE + 1)
+      .returns<InboxMessage[]>();
+    if (error) {
+      setOlderState("error");
+      return;
+    }
+    const rows = data ?? [];
+    prependFrom.current = scrollRef.current?.scrollHeight ?? null;
+    setHasOlder(rows.length > MESSAGE_PAGE_SIZE);
+    setMessages((current) => {
+      const seen = new Set(current.map((m) => m.id));
+      return [...rows.slice(0, MESSAGE_PAGE_SIZE).reverse().filter((m) => !seen.has(m.id)), ...current];
+    });
+    setOlderState("idle");
+  }
+
+  // Setelah pesan lama disisipkan di atas, pertahankan pesan yang sedang dilihat.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el && prependFrom.current !== null) {
+      el.scrollTop += el.scrollHeight - prependFrom.current;
+      prependFrom.current = null;
+    }
+  }, [messages]);
 
   useEffect(
     () =>
@@ -99,35 +172,39 @@ export function ConversationView({
     [initialContact.id],
   );
 
+  // Gulir ke bawah saat dibuka dan saat pesan terbaru bertambah (bukan saat
+  // pesan lama dimuat).
+  const lastId = messages.at(-1)?.id;
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+  }, [lastId]);
 
   const name = contact.nama ?? formatPhone(contact.nomor_hp);
 
   return (
     <section aria-label="Percakapan" className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-3.5 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="flex flex-col gap-2.5 border-b bg-card px-3 py-2.5 sm:px-6 sm:py-3.5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <Link
-            href={`/w/${slug}/inbox`}
+            href={`/w/${slug}/inbox${listQuery}`}
             aria-label="Kembali ke daftar"
-            className="flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
+            className="-ml-1 flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
           >
             <ArrowLeft aria-hidden className="size-5" />
           </Link>
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#e0f2f1] text-[15px] font-bold text-primary">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#e0f2f1] text-[15px] font-bold text-primary sm:size-11">
             {initials(name)}
           </span>
           <div className="flex min-w-0 flex-col">
-            <h2 className="truncate text-[17px] font-bold">{name}</h2>
+            <h2 className="truncate text-base font-bold sm:text-[17px]">{name}</h2>
             <span className="truncate text-[13px] text-muted-foreground">
               {formatPhone(contact.nomor_hp)}
               {numberLabel ? ` · via ${numberLabel}` : ""}
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap items-start gap-2">
+        {/* HP: kontrol dalam satu baris yang bisa digeser. */}
+        <div className="-mx-3 flex items-start gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
           <StageSelect slug={slug} contactId={contact.id} value={contact.stage_id} stages={stages} />
           <AssignSelect
             slug={slug}
@@ -139,7 +216,7 @@ export function ConversationView({
           />
           <Link
             href={`/w/${slug}/kontak/${contact.id}`}
-            className="inline-flex h-9 items-center rounded-lg border px-3 text-[13px] font-semibold text-secondary-foreground hover:bg-muted"
+            className="inline-flex h-9 items-center rounded-lg border px-3 text-[13px] font-semibold whitespace-nowrap text-secondary-foreground hover:bg-muted"
           >
             Detail & catatan
           </Link>
@@ -149,8 +226,8 @@ export function ConversationView({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 px-4 pt-4 sm:px-6">
-        <div className="flex min-w-[260px] flex-[2] items-start gap-3 rounded-xl border bg-card px-3.5 py-3">
+      <div className="flex gap-3 overflow-x-auto px-3 pt-3 [scrollbar-width:none] sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] sm:overflow-visible sm:px-6 sm:pt-4 [&>*]:shrink-0">
+        <div className="flex w-[80%] items-start gap-3 rounded-xl border bg-card px-3.5 py-3 sm:w-auto">
           <span
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-[10px]",
@@ -161,17 +238,15 @@ export function ConversationView({
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">Atribusi (first-touch)</span>
-            <span className="text-sm font-semibold">
-              {contact.sumber === "ctwa" ? (contact.referral_headline ?? "Iklan tanpa judul") : "Organik / Tidak diketahui"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {contact.sumber === "ctwa" ? `ID iklan ${contact.ad_id}` : "Chat ini tidak membawa data referral iklan."}
+            <span className="text-sm font-semibold">{adName ?? "Organik / Tidak diketahui"}</span>
+            <span className="text-xs break-all text-muted-foreground">
+              {contact.sumber === "ctwa" ? `ID iklan ${contact.ad_id ?? "—"}` : "Chat ini tidak membawa data referral iklan."}
             </span>
           </div>
         </div>
-        <div className="flex min-w-[200px] flex-1 flex-col gap-1.5 rounded-xl border bg-card px-3.5 py-3">
+        <div className="flex w-[64%] min-w-0 flex-col gap-1.5 rounded-xl border bg-card px-3.5 py-3 sm:w-auto">
           <span className="text-xs text-muted-foreground">Waktu tanggapan</span>
-          <span suppressHydrationWarning>
+          <span suppressHydrationWarning className="min-w-0 [&>span]:whitespace-normal">
             <ResponseBadge status={responseStatus(contact, now, thresholds)} long />
           </span>
           <span className="text-xs text-muted-foreground">
@@ -180,7 +255,26 @@ export function ConversationView({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-5 sm:px-6">
+      <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5">
+        {hasOlder && (
+          <button
+            type="button"
+            onClick={() => void loadOlder()}
+            disabled={olderState === "loading"}
+            className="inline-flex min-h-9 items-center gap-1.5 self-center rounded-full border bg-card px-3.5 text-[13px] font-semibold text-secondary-foreground hover:bg-muted disabled:opacity-60"
+          >
+            <History aria-hidden className="size-4" />
+            {olderState === "loading" ? "Memuat…" : olderState === "error" ? "Gagal memuat, coba lagi" : "Muat pesan lama"}
+          </button>
+        )}
+        {!hasOlder && messages.length > 0 && (
+          <p className="self-center text-xs text-muted-foreground">Awal percakapan yang tersimpan</p>
+        )}
+        {!messages.length && (
+          <p className="m-auto max-w-xs text-center text-sm text-muted-foreground">
+            Belum ada pesan tersimpan untuk kontak ini. Pesan baru akan muncul di sini.
+          </p>
+        )}
         {messages.map((m, i) => {
           const out = m.arah === "keluar";
           const Icon = MEDIA_ICON[m.tipe] ?? Paperclip;

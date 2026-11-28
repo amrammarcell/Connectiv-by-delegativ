@@ -110,6 +110,19 @@ Langkah:
 - Tidak perlu `register` nomor untuk Coexistence.
 - Cek: `GET /<PHONE_NUMBER_ID>?fields=is_on_biz_app,platform_type` → `true` dan `CLOUD_API`.
 
+**Status kode (29 Nov 2026): sudah dibangun, di balik feature flag.** Fitur aktif otomatis jika env berikut terisi di Vercel (semua wajib):
+
+| Env | Isi |
+|---|---|
+| `META_APP_ID` | App ID app Connectiv (App settings → Basic) |
+| `META_EMBEDDED_SIGNUP_CONFIG_ID` | Configuration ID dari langkah 👤 no. 2 di atas |
+| `WHATSAPP_APP_SECRET` | App secret (juga dipakai verifikasi signature webhook) |
+| `WHATSAPP_TOKEN_ENCRYPTION_KEY` | 32 byte acak base64 (`npm run webhook:tokens`); jangan diganti setelah ada nomor resmi |
+
+Letak kode: tombol dan halaman di `app/(app)/w/[slug]/pengaturan/nomor-whatsapp/` (Owner/Super Admin), alur server di `lib/whatsapp/onboarding.ts` (tukar code → token terenkripsi di `wa_business_tokens` → `subscribed_apps` → `wa_numbers.sumber = 'resmi'` → `smb_app_data` kontak lalu riwayat, masing-masing sekali; gagal bisa dicoba lagi dari halaman atau cron harian selama masih dalam 24 jam). Event Coexistence hanya membawa `waba_id`, jadi nomornya dibaca dari `GET /<WABA_ID>/phone_numbers`.
+
+**Pindah dari Dualhook:** onboarding nomor yang sudah ada (Phone Number ID sama, workspace sama) mengubahnya menjadi `resmi` tanpa mengubah label/CS pemilik. Setelah itu event `account_update` dari URL Dualhook (mis. `PARTNER_REMOVED` saat langganan Dualhook dibatalkan) tidak lagi menandai nomor itu terputus, begitu juga event pemutusan yang diterima sebelum waktu sambung ulang (`wa_numbers.resmi_sejak`).
+
 ## Tahap 5 — Uji dan Live
 
 1. Onboarding nomor internal Delegativ lewat tombol Hubungkan WhatsApp.

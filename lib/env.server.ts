@@ -63,3 +63,55 @@ export function metaAdsEnv(): MetaAdsEnv {
     CRON_SECRET: process.env.CRON_SECRET || undefined,
   });
 }
+
+// Jalur resmi Tech Provider (Embedded Signup + Coexistence). Fitur hanya aktif
+// jika semua variabel wajib terisi; selama verifikasi bisnis/App Review Meta
+// belum selesai, biarkan kosong dan tombol "Tambah nomor WhatsApp" tidak tampil.
+const techProviderSchema = z.object({
+  // App ID app Meta "Connectiv" (App settings → Basic). Bukan rahasia, dikirim
+  // ke browser untuk FB.init.
+  META_APP_ID: z.string().regex(/^\d{5,30}$/),
+  // Facebook Login for Business → Configurations → Configuration ID.
+  META_EMBEDDED_SIGNUP_CONFIG_ID: z.string().regex(/^\d{5,30}$/),
+  // App secret yang sama dengan verifikasi signature webhook; hanya di server.
+  WHATSAPP_APP_SECRET: z.string().min(16),
+  // 32 byte acak dalam base64 (npm run webhook:tokens) untuk AES-256-GCM token bisnis.
+  WHATSAPP_TOKEN_ENCRYPTION_KEY: z
+    .string()
+    .refine((v) => Buffer.from(v, "base64").length === 32, "harus 32 byte base64"),
+  META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v27.0"),
+});
+
+export type TechProviderEnv = z.infer<typeof techProviderSchema>;
+
+// null = fitur mati (env belum lengkap atau tidak valid).
+export function techProviderEnv(): TechProviderEnv | null {
+  const result = techProviderSchema.safeParse({
+    META_APP_ID: process.env.META_APP_ID || undefined,
+    META_EMBEDDED_SIGNUP_CONFIG_ID: process.env.META_EMBEDDED_SIGNUP_CONFIG_ID || undefined,
+    WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET || undefined,
+    WHATSAPP_TOKEN_ENCRYPTION_KEY: process.env.WHATSAPP_TOKEN_ENCRYPTION_KEY || undefined,
+    META_GRAPH_VERSION: process.env.META_GRAPH_VERSION || undefined,
+  });
+  return result.success ? result.data : null;
+}
+
+const alertsSchema = z.object({
+  // Opsional: alert operasional dikirim lewat email (Resend). Kosong = alert
+  // hanya dicatat (console.error terstruktur + banner di /admin).
+  RESEND_API_KEY: z.string().min(1).optional(),
+  // Satu atau beberapa alamat, dipisah koma.
+  ALERT_EMAIL_TO: z.string().min(3).optional(),
+  // Pengirim terverifikasi di Resend; default alamat uji Resend.
+  ALERT_EMAIL_FROM: z.string().min(3).default("Connectiv <onboarding@resend.dev>"),
+});
+
+export type AlertsEnv = z.infer<typeof alertsSchema>;
+
+export function alertsEnv(): AlertsEnv {
+  return parseEnv(alertsSchema, {
+    RESEND_API_KEY: process.env.RESEND_API_KEY || undefined,
+    ALERT_EMAIL_TO: process.env.ALERT_EMAIL_TO || undefined,
+    ALERT_EMAIL_FROM: process.env.ALERT_EMAIL_FROM || undefined,
+  });
+}

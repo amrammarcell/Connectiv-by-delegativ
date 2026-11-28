@@ -56,22 +56,25 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 👤 Verifikasi bisnis PT Trinitas Delegasi Kreatif (dokumen sesuai alamat, website, konfirmasi lewat telepon/SMS)
 - [ ] 👤 App Review `whatsapp_business_management` dan `whatsapp_business_messaging` (naskah video di `docs/TECH-PROVIDER.md`)
 - [ ] 👤 Facebook Login for Business → Configuration Embedded Signup → catat Configuration ID
-- [ ] 🤖 Sprint 2b: tombol "Tambah nomor" (Embedded Signup + Coexistence), tukar `code` → token, `subscribed_apps`, token tersimpan terenkripsi
-- [ ] 🤖 Sinkronisasi kontak lalu riwayat otomatis (dalam 24 jam), status di UI
-- [ ] 🤖 Pengaturan → Nomor WhatsApp untuk Owner: label, CS pemilik, status
+- [x] 🤖 Sprint 2b: tombol "Tambah nomor" (Embedded Signup + Coexistence), tukar `code` → token, `subscribed_apps`, token tersimpan terenkripsi (kode siap di balik feature flag; aktif setelah env Meta diisi, lihat `docs/TECH-PROVIDER.md` Tahap 4)
+- [x] 🤖 Sinkronisasi kontak lalu riwayat otomatis (dalam 24 jam), status di UI (tombol Coba lagi + cron harian)
+- [x] 🤖 Pengaturan → Nomor WhatsApp untuk Owner: label, CS pemilik, status, sumber koneksi (Dualhook / resmi)
 - [ ] 👤🤖 Pindah nomor Sobatimport dari Dualhook ke jalur resmi (jam sepi), batalkan Dualhook
 - ✅ Owner klien menambah nomor sales sendiri; tidak ada nomor yang bergantung pada Dualhook
 
 ## 4. Pengalaman pengguna (UX)
 **Fokus:** nyaman dipakai CS dan supervisor setiap hari, di laptop maupun HP.
 
-- [ ] 🤖 Tampilan HP: sidebar menjadi menu ringkas/bawah; Inbox, Pipeline, Dashboard enak di layar kecil
-- [ ] 🤖 Filter Inbox lanjutan: CS, stage, iklan tertentu, rentang tanggal
-- [ ] 🤖 Filter Dashboard per nomor WA dan per CS
-- [ ] 🤖 Penanda chat belum dibaca dan notifikasi chat baru di browser
-- [ ] 🤖 Nama iklan dari Meta (tabel `ads`) dipakai di Inbox, Kontak, Pipeline
-- [ ] 🤖 Status kosong, loading, dan pesan error yang jelas di semua halaman
+- [x] 🤖 Tampilan HP: sidebar menjadi menu ringkas/bawah; Inbox, Pipeline, Dashboard enak di layar kecil
+- [x] 🤖 Filter Inbox lanjutan: CS, stage, iklan tertentu, rentang tanggal
+- [x] 🤖 Filter Dashboard per nomor WA dan per CS
+- [x] 🤖 Penanda chat belum dibaca dan notifikasi chat baru di browser
+- [x] 🤖 Nama iklan dari Meta (tabel `ads`) dipakai di Inbox, Kontak, Pipeline
+- [x] 🤖 Status kosong, loading, dan pesan error yang jelas di semua halaman
 - [ ] 👤 Kumpulkan masukan CS dan supervisor Sobatimport tiap minggu
+
+*Catatan jalur 4 (29 Nov 2026):* migrasi `20261128110000_ux_read_state_filters.sql` (tabel `contact_reads`, fungsi `inbox_contacts`, `inbox_summary`, `mark_all_contacts_read`, `workspace_ad_names`, `dashboard_*_v2`; aditif). Filter Inbox ada di URL (`?tab=&cs=&stage=&iklan=&dari=&sampai=&nomor=&q=`); rentang tanggal Inbox = tanggal pesan terakhir (WIB). Filter Dashboard per CS/nomor tidak memecah spend iklan (spend penuh tiap iklan). Nama iklan untuk CS lewat `workspace_ad_names` (security definer, hanya id + nama). Notifikasi browser hanya selama tab Connectiv terbuka (belum ada push/service worker).
+
 - ✅ Supervisor bisa memantau dan CS bisa bekerja penuh dari HP
 
 ## 5. Kesiapan produksi
@@ -80,8 +83,9 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 👤 Project Supabase produksi `connectiv-prod` (Singapore, paket Pro)
 - [ ] 🤖 Migrasi skema ke produksi, pindahkan data pilot, pisahkan env dev/produksi
 - [ ] 👤 Domain `connectiv.delegativ.com` di Vercel; atur Deployment Protection
-- [ ] 🤖 `admin_access_log`: catat setiap akses Super Admin ke workspace klien (PRD §6)
-- [ ] 🤖 Pelacakan error (mis. Sentry) dan alert jika cron, webhook, atau sync iklan gagal
+- [x] 🤖 `admin_access_log`: catat setiap akses Super Admin ke workspace klien (PRD §6); tampil di `/admin/log-akses`
+- [x] 🤖 Alert jika cron, webhook, atau sync iklan gagal: `ops_alerts` + banner di `/admin` + `console.error` terstruktur; email lewat Resend jika `RESEND_API_KEY` dan `ALERT_EMAIL_TO` diisi
+- [ ] 👤 Akun Sentry (atau sejenis) untuk pelacakan error aplikasi, lalu 🤖 pasang SDK-nya
 - [ ] 👤🤖 Backup harian dan uji pemulihan
 - [ ] 👤 Review keamanan oleh developer berpengalaman (PRD §6)
 - [ ] 👤 Perbarui alamat di halaman legal setelah akta perubahan selesai (`lib/company.ts`)
@@ -101,12 +105,12 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 ## 7. Operasional pilot dan metrik
 **Fokus:** membuktikan target pilot (PRD §2.8) untuk keputusan go/no-go.
 
-- [ ] 🤖 Halaman metrik pilot di `/admin`:
+- [x] 🤖 Halaman metrik pilot di `/admin/metrik` (cara hitung dijelaskan di halaman):
   - pesan ter-mirror dibanding chat di HP (≥ 99%)
   - chat yang ditandai Closing atau Lost (≥ 70%)
   - chat CTWA yang terkait ID iklan (≥ 90%)
   - supervisor/owner membuka dashboard (≥ 3x per minggu)
-- [ ] 🤖 Catat kunjungan dashboard per user (untuk metrik di atas)
+- [x] 🤖 Catat kunjungan dashboard per user (untuk metrik di atas): `page_visits`, maksimal sekali per 30 menit
 - [ ] 👤 SOP onboarding klien (versi HP, izinkan riwayat chat, jangan uninstall, buka aplikasi berkala, grup tidak tersinkron)
 - [ ] 👤 Perjanjian pilot + persetujuan pemrosesan data (UU PDP)
 - [ ] 👤 Review mingguan dengan klien pilot; wawancara harga di minggu 5–6
@@ -144,7 +148,7 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [x] 🤖 Ambil profil anggota workspace saja, bukan semua profil yang terlihat
 
 **D. Data yang membesar**
-- [ ] 🤖 Paginasi daftar Inbox dan Kontak; "muat pesan lama" di percakapan
+- [x] 🤖 Paginasi daftar Inbox dan Kontak; "muat pesan lama" di percakapan (jalur 4)
 - [x] 🤖 Ingest berkelompok (selesai di jalur 1: `ingest_messages`)
 - [x] 🤖 Arsip/hapus data lama (`webhook_events`, `sync_runs`; selesai di jalur 1: cron harian)
 
