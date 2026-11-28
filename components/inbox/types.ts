@@ -22,7 +22,7 @@ export type InboxContact = {
 };
 
 export const MESSAGE_COLUMNS =
-  "id, contact_id, wa_message_id, arah, tipe, isi, media_mime, nama_file, dari_history, dikirim_pada, diedit_pada, dihapus_pada" as const;
+  "id, contact_id, wa_message_id, arah, tipe, isi, media_mime, nama_file, media_status, media_size, dari_history, dikirim_pada, diedit_pada, dihapus_pada" as const;
 
 export type InboxMessage = {
   id: string;
@@ -33,6 +33,9 @@ export type InboxMessage = {
   isi: string | null;
   media_mime: string | null;
   nama_file: string | null;
+  // Unduhan media ke Storage (null = belum dicoba).
+  media_status: "menunggu" | "tersimpan" | "gagal" | "tidak_tersedia" | null;
+  media_size: number | null;
   dari_history: boolean;
   dikirim_pada: string;
   // Diedit / ditarik ("hapus untuk semua") oleh pengirim.

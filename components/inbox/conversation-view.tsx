@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Ban, FileText, Image as ImageIcon, Megaphone, Mic, Paperclip, Smartphone, Video } from "lucide-react";
+import { ArrowLeft, Ban, Megaphone, Smartphone } from "lucide-react";
 import { useNow } from "@/hooks/use-now";
 import { formatClock, formatDayLabel, formatPhone, initials, isSameDay } from "@/lib/format";
 import { responseStatus, type Thresholds } from "@/lib/response-time";
@@ -11,24 +11,9 @@ import { cn } from "@/lib/utils";
 import { AssignSelect, StageSelect } from "@/components/contacts/contact-controls";
 import { DealButtons } from "@/components/deals/deal-dialog";
 import type { Member, Stage } from "@/lib/workspace-data";
+import { MEDIA_TYPES, MessageMedia } from "./message-media";
 import { ResponseBadge } from "./response-badge";
 import { MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "./types";
-
-const MEDIA_ICON: Record<string, typeof ImageIcon> = {
-  image: ImageIcon,
-  sticker: ImageIcon,
-  video: Video,
-  audio: Mic,
-  document: FileText,
-};
-
-const MEDIA_LABEL: Record<string, string> = {
-  image: "Gambar",
-  sticker: "Stiker",
-  video: "Video",
-  audio: "Voice note",
-  document: "Dokumen",
-};
 
 export function ConversationView({
   slug,
@@ -79,12 +64,22 @@ export function ConversationView({
             "postgres_changes",
             { event: "UPDATE", schema: "public", table: "messages", filter: `contact_id=eq.${initialContact.id}` },
             (payload) => {
-              // Pesan diedit atau ditarik pengirimnya.
+              // Pesan diedit atau ditarik pengirimnya, atau medianya selesai diunduh.
               const updated = payload.new as InboxMessage;
               setMessages((current) =>
                 current.map((m) =>
                   m.id === updated.id
-                    ? { ...m, isi: updated.isi, diedit_pada: updated.diedit_pada, dihapus_pada: updated.dihapus_pada }
+                    ? {
+                        ...m,
+                        tipe: updated.tipe,
+                        isi: updated.isi,
+                        diedit_pada: updated.diedit_pada,
+                        dihapus_pada: updated.dihapus_pada,
+                        media_mime: updated.media_mime,
+                        nama_file: updated.nama_file,
+                        media_status: updated.media_status,
+                        media_size: updated.media_size,
+                      }
                     : m,
                 ),
               );
@@ -183,7 +178,6 @@ export function ConversationView({
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-5 sm:px-6">
         {messages.map((m, i) => {
           const out = m.arah === "keluar";
-          const Icon = MEDIA_ICON[m.tipe] ?? Paperclip;
           const showDay = i === 0 || !isSameDay(messages[i - 1]!.dikirim_pada, m.dikirim_pada);
           return (
             <Fragment key={m.id}>
@@ -206,15 +200,9 @@ export function ConversationView({
                     </span>
                   ) : (
                     <>
-                  {MEDIA_LABEL[m.tipe] && (
-                    <span className="flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-[13px] text-secondary-foreground">
-                      <Icon aria-hidden className="size-[18px]" />
-                      {m.nama_file ?? MEDIA_LABEL[m.tipe]}
-                      <span className="text-xs text-muted-foreground">· pratinjau menyusul</span>
-                    </span>
-                  )}
+                  {MEDIA_TYPES.has(m.tipe) && <MessageMedia message={m} />}
                   {m.isi && <span className="whitespace-pre-line">{m.isi}</span>}
-                  {!m.isi && !MEDIA_LABEL[m.tipe] && <span className="text-muted-foreground italic">Pesan {m.tipe}</span>}
+                  {!m.isi && !MEDIA_TYPES.has(m.tipe) && <span className="text-muted-foreground italic">Pesan {m.tipe}</span>}
                     </>
                   )}
                   <span className={cn("text-[11px] text-muted-foreground", out ? "self-end" : "self-start")}>
