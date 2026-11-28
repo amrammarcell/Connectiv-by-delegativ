@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { PATH_HEADER } from "@/lib/activity-shared";
 import { publicEnv } from "@/lib/env";
 
 const PUBLIC_PATHS = ["/login", "/kebijakan-privasi", "/syarat-ketentuan", "/hapus-data"];
@@ -8,6 +9,9 @@ const PUBLIC_PATHS = ["/login", "/kebijakan-privasi", "/syarat-ketentuan", "/hap
 // belum login ke /login. Hak akses per workspace diperiksa di lib/auth.ts dan RLS.
 export async function proxy(request: NextRequest) {
   const env = publicEnv();
+  // Path halaman untuk log akses Super Admin (lib/activity.ts). Selalu ditimpa
+  // supaya nilai dari klien tidak dipakai.
+  request.headers.set(PATH_HEADER, request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

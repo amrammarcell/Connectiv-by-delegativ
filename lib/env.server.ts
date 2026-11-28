@@ -63,3 +63,23 @@ export function metaAdsEnv(): MetaAdsEnv {
     CRON_SECRET: process.env.CRON_SECRET || undefined,
   });
 }
+
+const alertsSchema = z.object({
+  // Opsional: alert operasional dikirim lewat email (Resend). Kosong = alert
+  // hanya dicatat (console.error terstruktur + banner di /admin).
+  RESEND_API_KEY: z.string().min(1).optional(),
+  // Satu atau beberapa alamat, dipisah koma.
+  ALERT_EMAIL_TO: z.string().min(3).optional(),
+  // Pengirim terverifikasi di Resend; default alamat uji Resend.
+  ALERT_EMAIL_FROM: z.string().min(3).default("Connectiv <onboarding@resend.dev>"),
+});
+
+export type AlertsEnv = z.infer<typeof alertsSchema>;
+
+export function alertsEnv(): AlertsEnv {
+  return parseEnv(alertsSchema, {
+    RESEND_API_KEY: process.env.RESEND_API_KEY || undefined,
+    ALERT_EMAIL_TO: process.env.ALERT_EMAIL_TO || undefined,
+    ALERT_EMAIL_FROM: process.env.ALERT_EMAIL_FROM || undefined,
+  });
+}

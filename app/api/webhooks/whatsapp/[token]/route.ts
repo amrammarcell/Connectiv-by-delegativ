@@ -1,4 +1,6 @@
 import { after } from "next/server";
+import { checkWebhookHealth } from "@/lib/alerts";
+import { defaultNotifier } from "@/lib/alerts-notifier";
 import { whatsappEnv, type WhatsappEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { processWebhookEvent } from "@/lib/whatsapp/processor";
@@ -88,11 +90,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/webhooks/wh
   // Proses menjadi kontak + pesan setelah membalas, supaya Meta tidak menunggu.
   // Kegagalan tercatat di webhook_events dan bisa diulang (npm run webhook:reprocess).
   after(async () => {
+    let healthCheck = false;
     try {
-      await processWebhookEvent(admin, event.id);
+      const result = await processWebhookEvent(admin, event.id);
+      healthCheck = result.unknownNumbers.length > 0;
     } catch (err) {
       console.error("webhook processing failed", event.id, err instanceof Error ? err.message : err);
+      healthCheck = true;
     }
+    // Event gagal/tertunda: buka alert (sekali per kejadian, lib/alerts.ts).
+    if (healthCheck) await checkWebhookHealth(admin, defaultNotifier()).catch(() => {});
   });
 
   return new Response("OK", { status: 200 });
