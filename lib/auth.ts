@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
+import { logAdminAccess } from "@/lib/activity";
 import { createClient } from "@/lib/supabase/server";
 import type { Peran, Workspace } from "@/lib/types";
 
@@ -75,6 +76,9 @@ export const requireWorkspace = cache(
       .eq("user_id", user.id)
       .maybeSingle<{ peran: Peran }>();
     const peran = membership?.peran ?? null;
+
+    // Super Admin yang membuka workspace klien (bukan anggota) dicatat.
+    if (!peran && user.isSuperAdmin) await logAdminAccess(user.id, workspace.id);
 
     return {
       user,

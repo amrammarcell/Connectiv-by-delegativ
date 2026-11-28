@@ -6,6 +6,7 @@ import { AdsTable } from "@/components/dashboard/ads-table";
 import { FilterForm } from "@/components/filter-form";
 import { DashboardSkeleton } from "@/components/states";
 import { PageHeader } from "@/components/page-header";
+import { logPageVisit } from "@/lib/activity";
 import { cheapChatInsight, dateRange, parseRange, RANGES, summarize, withMetrics, type AdRow } from "@/lib/dashboard";
 import { ALASAN_LABEL, formatRupiah, type AlasanLost } from "@/lib/deals";
 import { formatDuration } from "@/lib/response-time";
@@ -62,6 +63,9 @@ async function DashboardContent({
       </p>
     );
   }
+
+  // Metrik pilot: Owner/Supervisor membuka dashboard ≥ 3x per minggu.
+  logPageVisit(access.user.id, access.workspace.id, "dashboard");
 
   const range = parseRange(query.rentang);
   const { dari, sampai } = dateRange(range);

@@ -83,8 +83,9 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 - [ ] 👤 Project Supabase produksi `connectiv-prod` (Singapore, paket Pro)
 - [ ] 🤖 Migrasi skema ke produksi, pindahkan data pilot, pisahkan env dev/produksi
 - [ ] 👤 Domain `connectiv.delegativ.com` di Vercel; atur Deployment Protection
-- [ ] 🤖 `admin_access_log`: catat setiap akses Super Admin ke workspace klien (PRD §6)
-- [ ] 🤖 Pelacakan error (mis. Sentry) dan alert jika cron, webhook, atau sync iklan gagal
+- [x] 🤖 `admin_access_log`: catat setiap akses Super Admin ke workspace klien (PRD §6); tampil di `/admin/log-akses`
+- [x] 🤖 Alert jika cron, webhook, atau sync iklan gagal: `ops_alerts` + banner di `/admin` + `console.error` terstruktur; email lewat Resend jika `RESEND_API_KEY` dan `ALERT_EMAIL_TO` diisi
+- [ ] 👤 Akun Sentry (atau sejenis) untuk pelacakan error aplikasi, lalu 🤖 pasang SDK-nya
 - [ ] 👤🤖 Backup harian dan uji pemulihan
 - [ ] 👤 Review keamanan oleh developer berpengalaman (PRD §6)
 - [ ] 👤 Perbarui alamat di halaman legal setelah akta perubahan selesai (`lib/company.ts`)
@@ -104,12 +105,12 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 ## 7. Operasional pilot dan metrik
 **Fokus:** membuktikan target pilot (PRD §2.8) untuk keputusan go/no-go.
 
-- [ ] 🤖 Halaman metrik pilot di `/admin`:
+- [x] 🤖 Halaman metrik pilot di `/admin/metrik` (cara hitung dijelaskan di halaman):
   - pesan ter-mirror dibanding chat di HP (≥ 99%)
   - chat yang ditandai Closing atau Lost (≥ 70%)
   - chat CTWA yang terkait ID iklan (≥ 90%)
   - supervisor/owner membuka dashboard (≥ 3x per minggu)
-- [ ] 🤖 Catat kunjungan dashboard per user (untuk metrik di atas)
+- [x] 🤖 Catat kunjungan dashboard per user (untuk metrik di atas): `page_visits`, maksimal sekali per 30 menit
 - [ ] 👤 SOP onboarding klien (versi HP, izinkan riwayat chat, jangan uninstall, buka aplikasi berkala, grup tidak tersinkron)
 - [ ] 👤 Perjanjian pilot + persetujuan pemrosesan data (UU PDP)
 - [ ] 👤 Review mingguan dengan klien pilot; wawancara harga di minggu 5–6
