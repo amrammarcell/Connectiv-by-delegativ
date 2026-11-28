@@ -1,0 +1,54 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "1785116869270754",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "15551661742", "phone_number_id": "1502132426306454" },
+            "contacts": [{ "wa_id": "6281200000003", "profile": { "name": "Pelanggan Media" } }],
+            "messages": [
+              {
+                "from": "6281200000003",
+                "id": "wamid.UJI-MEDIA-AUDIO",
+                "timestamp": "1794980000",
+                "type": "audio",
+                "audio": { "id": "1000000000000001", "mime_type": "audio/ogg; codecs=opus", "sha256": "UJI=", "voice": true }
+              },
+              {
+                "from": "6281200000003",
+                "id": "wamid.UJI-MEDIA-VIDEO",
+                "timestamp": "1794980010",
+                "type": "video",
+                "video": { "id": "1000000000000002", "mime_type": "video/mp4", "sha256": "UJI=", "caption": "Ini videonya kak" }
+              },
+              {
+                "from": "6281200000003",
+                "id": "wamid.UJI-MEDIA-DOCUMENT",
+                "timestamp": "1794980020",
+                "type": "document",
+                "document": {
+                  "id": "1000000000000003",
+                  "mime_type": "application/pdf",
+                  "sha256": "UJI=",
+                  "filename": "Invoice-0425.pdf",
+                  "caption": "Invoice bulan ini"
+                }
+              },
+              {
+                "from": "6281200000003",
+                "id": "wamid.UJI-MEDIA-STICKER",
+                "timestamp": "1794980030",
+                "type": "sticker",
+                "sticker": { "id": "1000000000000004", "mime_type": "image/webp", "sha256": "UJI=", "animated": false }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

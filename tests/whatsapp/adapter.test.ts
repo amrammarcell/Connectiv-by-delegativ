@@ -142,3 +142,25 @@ describe("normalize", () => {
     );
   });
 });
+
+describe("normalize: media", () => {
+  it("voice note, video, dokumen, dan stiker membawa media id, mime, nama file, caption", () => {
+    const { messages } = fixture("inbound-media-types");
+    expect(messages.map((m) => [m.type, m.media, m.text])).toEqual([
+      ["audio", { id: "1000000000000001", mime: "audio/ogg; codecs=opus", filename: null }, null],
+      ["video", { id: "1000000000000002", mime: "video/mp4", filename: null }, "Ini videonya kak"],
+      [
+        "document",
+        { id: "1000000000000003", mime: "application/pdf", filename: "Invoice-0425.pdf" },
+        "Invoice bulan ini",
+      ],
+      ["sticker", { id: "1000000000000004", mime: "image/webp", filename: null }, null],
+    ]);
+    expect(messages.every((m) => m.direction === "masuk" && m.customerPhone === "6281200000003")).toBe(true);
+  });
+
+  it("riwayat chat: media_placeholder disimpan tanpa media", () => {
+    const [m] = fixture("coexistence-history-media").messages;
+    expect(m).toMatchObject({ type: "media_placeholder", media: null, text: null, fromHistory: true });
+  });
+});
