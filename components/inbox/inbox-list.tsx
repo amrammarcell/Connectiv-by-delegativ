@@ -27,9 +27,7 @@ import { subscribeWithAuth } from "@/lib/supabase/realtime";
 import { cn } from "@/lib/utils";
 import { NotificationToggle, showChatNotification } from "./notifications";
 import { ResponseBadge, SourceBadge } from "./response-badge";
-import type { InboxContact, Lookup } from "./types";
-
-export const INBOX_PAGE_SIZE = 50;
+import { INBOX_PAGE_SIZE, type InboxContact, type Lookup } from "./types";
 
 export type InboxRow = InboxContact & { dibaca_pada?: string | null };
 export type InboxSummary = { total: number; menunggu: number; iklan: number; belum_dibaca: number };
@@ -199,8 +197,8 @@ export function InboxList({
     setPreviousActive(contactId);
     if (previousActive) setReads((current) => ({ ...current, [previousActive]: new Date().toISOString() }));
   }
+  // Jumlah "belum dibaca" diperbarui setelah status baca tersimpan.
   useEffect(() => {
-    if (!contactId) return;
     const t = setTimeout(() => void refreshSummary(), 1500);
     return () => clearTimeout(t);
   }, [contactId, refreshSummary]);
@@ -307,7 +305,7 @@ export function InboxList({
     <section
       aria-label="Daftar percakapan"
       className={cn(
-        "flex min-h-0 flex-col border-r bg-card md:w-[380px] md:shrink-0",
+        "flex min-h-0 min-w-0 flex-col border-r bg-card md:w-[380px] md:shrink-0",
         contactId ? "hidden md:flex" : "flex flex-1 md:flex-none",
       )}
     >
@@ -344,7 +342,7 @@ export function InboxList({
           </button>
         </div>
 
-        <div role="group" aria-label="Tampilkan" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
+        <div role="group" aria-label="Tampilkan" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -363,9 +361,9 @@ export function InboxList({
         </div>
 
         {showFilters && (
-          <div id="inbox-filter-panel" className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-2.5">
+          <div id="inbox-filter-panel" className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 rounded-xl bg-muted/50 p-2.5">
             {Object.keys(numbers).length > 1 && (
-              <label className="col-span-2 flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+              <label className="col-span-2 flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground">
                 Nomor WhatsApp
                 <select value={filters.nomor} onChange={(e) => navigate({ nomor: e.target.value })} className={selectClass}>
                   <option value="">Semua nomor</option>
@@ -378,7 +376,7 @@ export function InboxList({
               </label>
             )}
             {members.length > 0 && (
-              <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+              <label className="flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground">
                 CS
                 <select value={filters.cs} onChange={(e) => navigate({ cs: e.target.value })} className={selectClass}>
                   <option value="">Semua CS</option>
@@ -391,7 +389,7 @@ export function InboxList({
                 </select>
               </label>
             )}
-            <label className={cn("flex flex-col gap-1 text-xs font-semibold text-muted-foreground", !members.length && "col-span-2")}>
+            <label className={cn("flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground", !members.length && "col-span-2")}>
               Stage
               <select value={filters.stage} onChange={(e) => navigate({ stage: e.target.value })} className={selectClass}>
                 <option value="">Semua stage</option>
@@ -402,7 +400,7 @@ export function InboxList({
                 ))}
               </select>
             </label>
-            <label className="col-span-2 flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+            <label className="col-span-2 flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground">
               Iklan
               <select value={filters.iklan} onChange={(e) => navigate({ iklan: e.target.value })} className={selectClass}>
                 <option value="">Semua iklan</option>
@@ -413,7 +411,7 @@ export function InboxList({
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+            <label className="flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground">
               Pesan terakhir dari
               <input
                 type="date"
@@ -423,7 +421,7 @@ export function InboxList({
                 className={selectClass}
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+            <label className="flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground">
               sampai
               <input
                 type="date"

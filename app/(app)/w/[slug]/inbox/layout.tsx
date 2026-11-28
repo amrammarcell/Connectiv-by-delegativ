@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { InboxHeader } from "@/components/inbox/inbox-header";
-import { INBOX_PAGE_SIZE, InboxList, type InboxRow, type InboxSummary } from "@/components/inbox/inbox-list";
+import { InboxList, type InboxRow, type InboxSummary } from "@/components/inbox/inbox-list";
+import { INBOX_PAGE_SIZE } from "@/components/inbox/types";
 import { InboxShellSkeleton } from "@/components/states";
 import { EMPTY_FILTERS, inboxRpcArgs } from "@/lib/inbox-filters";
 import { getInboxLookups } from "@/lib/inbox";

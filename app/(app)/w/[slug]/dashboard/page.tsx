@@ -196,14 +196,14 @@ async function DashboardContent({
         </p>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(170px,1fr))] sm:gap-3">
         {tiles.map((t) => (
           <div
             key={t.label}
-            className={cn("flex flex-col gap-1 rounded-2xl px-4 py-3.5", t.highlight ? "bg-sidebar text-white" : "border bg-card")}
+            className={cn("flex min-w-0 flex-col gap-1 rounded-2xl px-3 py-3 sm:px-4 sm:py-3.5", t.highlight ? "bg-sidebar text-white" : "border bg-card")}
           >
             <span className={cn("text-xs font-semibold", t.highlight ? "text-[#9de5d9]" : "text-muted-foreground")}>{t.label}</span>
-            <span className="text-2xl font-bold tracking-tight">{t.value}</span>
+            <span className="text-xl font-bold tracking-tight sm:text-2xl">{t.value}</span>
             <span className={cn("text-xs", t.highlight ? "text-sidebar-foreground" : "text-muted-foreground")}>{t.sub}</span>
           </div>
         ))}

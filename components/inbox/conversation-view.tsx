@@ -14,7 +14,7 @@ import { AssignSelect, StageSelect } from "@/components/contacts/contact-control
 import { DealButtons } from "@/components/deals/deal-dialog";
 import type { Member, Stage } from "@/lib/workspace-data";
 import { ResponseBadge } from "./response-badge";
-import { MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "./types";
+import { MESSAGE_COLUMNS, MESSAGE_PAGE_SIZE, type InboxContact, type InboxMessage } from "./types";
 
 const MEDIA_ICON: Record<string, typeof ImageIcon> = {
   image: ImageIcon,
@@ -31,9 +31,6 @@ const MEDIA_LABEL: Record<string, string> = {
   audio: "Voice note",
   document: "Dokumen",
 };
-
-// Jumlah pesan per halaman (awal dan setiap "Muat pesan lama").
-export const MESSAGE_PAGE_SIZE = 80;
 
 export function ConversationView({
   slug,
@@ -80,9 +77,13 @@ export function ConversationView({
   useEffect(() => {
     const markRead = () => {
       if (document.visibilityState !== "visible") return;
-      void supabase
+      // Query builder Supabase baru dikirim saat di-then/await.
+      supabase
         .from("contact_reads")
-        .upsert({ user_id: userId, contact_id: initialContact.id, workspace_id: initialContact.workspace_id, dibaca_pada: new Date().toISOString() });
+        .upsert({ user_id: userId, contact_id: initialContact.id, workspace_id: initialContact.workspace_id, dibaca_pada: new Date().toISOString() })
+        .then(({ error }) => {
+          if (error) console.error("contact_reads", error.message);
+        });
     };
     markRead();
     document.addEventListener("visibilitychange", markRead);
@@ -203,7 +204,7 @@ export function ConversationView({
           </div>
         </div>
         {/* HP: kontrol dalam satu baris yang bisa digeser. */}
-        <div className="-mx-3 flex items-start gap-2 overflow-x-auto px-3 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
+        <div className="-mx-3 flex items-start gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
           <StageSelect slug={slug} contactId={contact.id} value={contact.stage_id} stages={stages} />
           <AssignSelect
             slug={slug}
@@ -225,8 +226,8 @@ export function ConversationView({
         </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto px-3 pt-3 sm:flex-wrap sm:px-6 sm:pt-4 [&>*]:shrink-0 sm:[&>*]:shrink">
-        <div className="flex w-[80%] items-start gap-3 rounded-xl border bg-card px-3.5 py-3 sm:w-auto sm:min-w-[260px] sm:flex-[2]">
+      <div className="flex gap-3 overflow-x-auto px-3 pt-3 [scrollbar-width:none] sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] sm:overflow-visible sm:px-6 sm:pt-4 [&>*]:shrink-0">
+        <div className="flex w-[80%] items-start gap-3 rounded-xl border bg-card px-3.5 py-3 sm:w-auto">
           <span
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-[10px]",
@@ -243,9 +244,9 @@ export function ConversationView({
             </span>
           </div>
         </div>
-        <div className="flex w-[64%] flex-col gap-1.5 rounded-xl border bg-card px-3.5 py-3 sm:w-auto sm:min-w-[200px] sm:flex-1">
+        <div className="flex w-[64%] min-w-0 flex-col gap-1.5 rounded-xl border bg-card px-3.5 py-3 sm:w-auto">
           <span className="text-xs text-muted-foreground">Waktu tanggapan</span>
-          <span suppressHydrationWarning>
+          <span suppressHydrationWarning className="min-w-0 [&>span]:whitespace-normal">
             <ResponseBadge status={responseStatus(contact, now, thresholds)} long />
           </span>
           <span className="text-xs text-muted-foreground">

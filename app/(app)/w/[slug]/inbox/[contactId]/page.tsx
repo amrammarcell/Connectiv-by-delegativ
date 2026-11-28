@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ConversationView, MESSAGE_PAGE_SIZE } from "@/components/inbox/conversation-view";
-import { CONTACT_COLUMNS, MESSAGE_COLUMNS, type InboxContact, type InboxMessage } from "@/components/inbox/types";
+import { ConversationView } from "@/components/inbox/conversation-view";
+import { CONTACT_COLUMNS, MESSAGE_COLUMNS, MESSAGE_PAGE_SIZE, type InboxContact, type InboxMessage } from "@/components/inbox/types";
 import { ConversationSkeleton } from "@/components/states";
 import { adLabel } from "@/lib/inbox-filters";
 import { getInboxLookups } from "@/lib/inbox";

@@ -148,7 +148,7 @@ export function PipelineBoard({
           {activeCount} kontak aktif · {formatRupiah(closingTotal)} closing · seret kartu atau pakai tombol di kartu
         </p>
         {canFilterByCs && members.length > 0 && (
-          <div role="group" aria-label="Filter CS" className="-mx-3 flex w-[calc(100%+1.5rem)] gap-2 overflow-x-auto px-3 pb-0.5 sm:mx-0 sm:w-auto sm:flex-wrap sm:px-0 [&>*]:shrink-0">
+          <div role="group" aria-label="Filter CS" className="-mx-3 flex w-[calc(100%+1.5rem)] gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:px-0 [&>*]:shrink-0">
             {[{ id: "", nama: "Semua" }, ...members].map((m) => (
               <button
                 key={m.id || "semua"}
