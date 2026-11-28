@@ -16,6 +16,7 @@
     "webhook:latest": "node --env-file=.env.local scripts/webhook-latest.mts",
     "webhook:reprocess": "tsx --env-file=.env.local scripts/webhook-reprocess.mts",
     "webhook:backfill-edits": "tsx --env-file=.env.local scripts/webhook-backfill-edits.mts",
+    "cleanup:test-workspaces": "tsx --env-file=.env.local scripts/cleanup-test-workspaces.mts",
     "perf:pages": "tsx --env-file=.env.local scripts/perf-pages.mts"
   },
   "dependencies": {
