@@ -40,14 +40,16 @@ Label: 👤 dikerjakan Anda (akun, dokumen, keputusan, klien) · 🤖 dikerjakan
 ## 2. Media chat
 **Fokus:** gambar, voice note, video, dan dokumen bisa dilihat dan diputar di Inbox.
 
-- [ ] 🤖 Bucket Supabase Storage privat `media`, RLS per workspace
-- [ ] 🤖 Unduh media begitu pesan masuk (media id Meta kedaluwarsa ±7 hari):
+- [x] 🤖 Bucket Supabase Storage privat `media`, RLS per workspace
+- [x] 🤖 Unduh media begitu pesan masuk (media id Meta kedaluwarsa ±7 hari):
   - nomor lewat Dualhook: Runtime API Dualhook dengan API key per koneksi
   - nomor lewat app sendiri / Tech Provider: Graph API dengan token
-- [ ] 🤖 Simpan `media_path`, tampilkan lewat signed URL (berlaku 1 jam)
-- [ ] 🤖 Pratinjau gambar, pemutar voice note dan video, tautan unduh dokumen
-- [ ] 🤖 Riwayat chat: `media_placeholder` lalu detail media yang menyusul
-- [ ] 👤 Simpan API key Dualhook Sobatimport di env (tidak lewat chat)
+- [x] 🤖 Simpan `media_path`, tampilkan lewat signed URL (berlaku 1 jam)
+- [x] 🤖 Pratinjau gambar, pemutar voice note dan video, tautan unduh dokumen
+- [x] 🤖 Riwayat chat: `media_placeholder` lalu detail media yang menyusul
+- [ ] 👤 Simpan API key Dualhook Sobatimport di env (tidak lewat chat): `DUALHOOK_API_KEYS=<phone_number_id>:dh_live_...` di `.env.local` dan Vercel
+
+*Catatan jalur 2:* migrasi `20261128100000_message_media.sql`. Media diunduh di `after()` route webhook (`lib/whatsapp/media.ts`, `downloadPendingMedia`) dan diulang cron harian (maks. 5 percobaan; media id > 7 hari langsung `tidak_tersedia`). Sumber per nomor: API key Dualhook jika ada di `DUALHOOK_API_KEYS`, selain itu Graph API dengan `WHATSAPP_ACCESS_TOKEN`; tanpa keduanya status `gagal` + alasan, dicoba lagi setelah kunci diisi. File dibuka lewat `/api/media/<id>` (cek sesi + RLS, alihkan ke signed URL 1 jam). Batas file 50 MB (batas global Supabase paket gratis).
 - ✅ CS dan supervisor bisa membuka semua lampiran tanpa membuka HP
 
 ## 3. Jalur resmi Tech Provider
